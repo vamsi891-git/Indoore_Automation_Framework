@@ -1,0 +1,9 @@
+[
+  { "path": "metric", "type": "string", "enum": ["communication", "energy-loss"] },
+  { "path": "title", "type": "string", "minLength": 1 },
+  { "path": "unit", "type": "string", "minLength": 1 },
+  { "path": "series", "type": "array" },
+  { "path": "series[0].name", "type": "string", "minLength": 1 },
+  { "path": "series[0].points[0].x", "type": "string", "minLength": 1 },
+  { "path": "series[0].points[0].y", "type": "number" }
+]

@@ -1,0 +1,75 @@
+{
+  "id": "indore",
+  "name": "Indore MDMS",
+  "schemaDir": "apps/indore/schemas",
+  "routes": {
+    "login": "/login",
+    "consumers": "/consumers",
+    "dashboard": "/dashboard"
+  },
+  "endpoints": {
+    "health": "health",
+    "login": "indore/auth/login",
+    "me": "indore/auth/me",
+    "dtrs": "indore/asset-management/dtrs",
+    "dtrById": "indore/asset-management/dtrs/{id}",
+    "metrics": "indore/dashboard/overall-metrics",
+    "communicationTrend": "indore/mis-dashboard/communication-trend",
+    "energyLossTrends": "indore/energy-audit/loss-analysis-trends",
+    "networkHierarchy": "indore/asset-management/network-hierarchy",
+    "organisationHierarchy": "indore/asset-management/organisation-hierarchy",
+    "consumerMetrics": "dashboard/consumer/metrics"
+  },
+  "keys": {
+    "apiKey": "INDORE_API_KEY",
+    "email": "EMAIL",
+    "adminPassword": "PASSWORD"
+  },
+  "headers": {
+    "Accept": "application/json"
+  },
+  "auth": {
+    "apiKeyHeader": "x-api-key",
+    "tokenScheme": "Bearer"
+  },
+  "storage": {
+    "authToken": "authToken"
+  },
+  "features": {
+    "charts": true,
+    "assets": true,
+    "dashboard": true
+  },
+  "ui": {
+    "elements": {
+      "email": { "method": "findByRole", "role": "textbox", "name": "Email Address" },
+      "password": { "method": "findByRole", "role": "textbox", "name": "Password" },
+      "captcha": { "method": "findByRole", "role": "textbox", "name": "Captcha" },
+      "loginSubmit": { "method": "findByRole", "role": "button", "name": "Login" },
+      "loginError": { "method": "findByRole", "role": "alert" },
+      "pageTitle": { "method": "findByText", "text": "Dashboard Overview" },
+      "consumersTab": { "method": "findByRole", "role": "tab", "name": "Consumers" },
+      "consumerOverview": { "method": "findByText", "text": "Consumer Overview" },
+      "consumerPeriod": { "method": "findByRole", "role": "button", "name": "Consumer dashboard month and year" },
+      "consumersChart": { "method": "findByRole", "role": "link", "name": "Active consumers", "exact": false },
+      "netMeteringChart": { "method": "findByRole", "role": "link", "name": "Net Metering Consumers", "exact": false },
+      "updateKpis": { "method": "findByRole", "role": "button", "name": "Update KPIs" },
+      "substationsCard": { "method": "findByRole", "role": "link", "name": "Substations", "exact": false },
+      "feedersCard": { "method": "findByRole", "role": "link", "name": "Feeders", "exact": false },
+      "dtrsCard": { "method": "findByRole", "role": "link", "name": "DTRs", "exact": false },
+      "consumersCard": { "method": "findByRole", "role": "link", "name": "Consumers", "exact": false },
+      "assetMap": { "method": "findByRole", "role": "region", "name": "Asset location map" },
+      "mapSearch": { "method": "findByRole", "role": "textbox", "name": "Search on the map" },
+      "appNav": { "method": "findByRole", "role": "navigation", "name": "Primary" },
+      "navDashboard": { "method": "findByRole", "role": "link", "name": "Dashboard" },
+      "navDtrs": { "method": "findByRole", "role": "link", "name": "DTRs" },
+      "dtrTable": { "method": "findByTestId", "testId": "dtr-table" },
+      "communicationChart": { "method": "findByRole", "role": "region", "name": "Communication trend" },
+      "energyLossChart": { "method": "findByRole", "role": "region", "name": "Energy loss trend" }
+    }
+  },
+  "execution": {
+    "webBrowsers": ["chromium"],
+    "e2eBrowsers": ["chromium"]
+  }
+}

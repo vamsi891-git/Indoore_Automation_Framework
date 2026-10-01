@@ -1,0 +1,57 @@
+[
+  {
+    "name": "load value must be a number",
+    "schema": "dtr",
+    "errorIncludes": "[type]",
+    "payload": {
+      "id": "2339",
+      "code": "DTR-2339",
+      "name": "Vijay Nagar",
+      "circle": "Indore City",
+      "locality": "Vijay Nagar",
+      "status": "online",
+      "load": {
+        "value": "high",
+        "unit": "kW",
+        "recordedAt": "2026-09-23T10:15:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "status must be one of the allowed values",
+    "schema": "dtr",
+    "errorIncludes": "[enum]",
+    "payload": {
+      "id": "2339",
+      "code": "DTR-2339",
+      "name": "Vijay Nagar",
+      "circle": "Indore City",
+      "locality": "Vijay Nagar",
+      "status": "exploded",
+      "load": {
+        "value": 186.4,
+        "unit": "kW",
+        "recordedAt": "2026-09-23T10:15:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "unknown properties are rejected",
+    "schema": "dtr",
+    "errorIncludes": "[additionalProperties]",
+    "payload": {
+      "id": "2339",
+      "code": "DTR-2339",
+      "name": "Vijay Nagar",
+      "circle": "Indore City",
+      "locality": "Vijay Nagar",
+      "status": "online",
+      "extra": true,
+      "load": {
+        "value": 186.4,
+        "unit": "kW",
+        "recordedAt": "2026-09-23T10:15:00.000Z"
+      }
+    }
+  }
+]

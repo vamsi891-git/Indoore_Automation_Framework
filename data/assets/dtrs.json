@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "id": "2339",
+      "code": "DTR-2339",
+      "name": "Vijay Nagar",
+      "circle": "Indore City",
+      "locality": "Vijay Nagar",
+      "status": "online",
+      "load": {
+        "value": 186.4,
+        "unit": "kW",
+        "recordedAt": "2026-09-23T10:15:00.000Z"
+      }
+    },
+    {
+      "id": "2401",
+      "code": "DTR-2401",
+      "name": "Palasia",
+      "circle": "Indore City",
+      "locality": "Palasia",
+      "status": "online",
+      "load": {
+        "value": 142,
+        "unit": "kW",
+        "recordedAt": "2026-09-23T10:15:00.000Z"
+      }
+    },
+    {
+      "id": "2510",
+      "code": "DTR-2510",
+      "name": "Bhawarkua",
+      "circle": "Indore West",
+      "locality": "Bhawarkua",
+      "status": "warning",
+      "load": {
+        "value": 210.5,
+        "unit": "kW",
+        "recordedAt": "2026-09-23T10:14:00.000Z"
+      }
+    }
+  ]
+}

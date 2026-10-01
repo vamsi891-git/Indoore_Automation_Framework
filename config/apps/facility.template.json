@@ -1,0 +1,54 @@
+{
+  "id": "facility",
+  "name": "Facility Automation",
+  "schemaDir": "apps/facility/schemas",
+  "routes": {
+    "login": "/login",
+    "dashboard": "/dashboard"
+  },
+  "endpoints": {
+    "health": "health",
+    "login": "auth/login",
+    "sensors": "sensors",
+    "sensorById": "sensors/{id}",
+    "metrics": "metrics"
+  },
+  "keys": {
+    "apiKey": "FACILITY_API_KEY",
+    "adminPassword": "FACILITY_ADMIN_PASSWORD"
+  },
+  "headers": {
+    "Accept": "application/json"
+  },
+  "auth": {
+    "apiKeyHeader": "x-api-key",
+    "tokenScheme": "Bearer"
+  },
+  "storage": {
+    "authToken": "authToken"
+  },
+  "features": {
+    "charts": true,
+    "sensors": true,
+    "dashboard": true
+  },
+  "ui": {
+    "elements": {
+      "email": { "method": "findByRole", "role": "textbox", "name": "Email Address" },
+      "password": { "method": "findByRole", "role": "textbox", "name": "Password" },
+      "loginSubmit": { "method": "findByRole", "role": "button", "name": "Login" },
+      "loginError": { "method": "findByRole", "role": "alert" },
+      "pageTitle": { "method": "findByText", "text": "Operations" },
+      "appNav": { "method": "findByRole", "role": "navigation", "name": "Primary" },
+      "navDashboard": { "method": "findByRole", "role": "link", "name": "Dashboard" },
+      "navDtrs": { "method": "findByRole", "role": "link", "name": "DTRs" },
+      "dtrTable": { "method": "findByTestId", "testId": "dtr-table" },
+      "communicationChart": { "method": "findByRole", "role": "region", "name": "Communication trend" },
+      "energyLossChart": { "method": "findByRole", "role": "region", "name": "Energy loss trend" }
+    }
+  },
+  "execution": {
+    "webBrowsers": ["chromium"],
+    "e2eBrowsers": ["chromium"]
+  }
+}

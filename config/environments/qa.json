@@ -1,0 +1,22 @@
+{
+  "name": "qa",
+  "baseUrl": "https://mdm.mppkvvcl.bestinfra.app",
+  "apiBaseUrl": "https://api.mdm.mppkvvcl.bestinfra.app",
+  "startDemoServer": false,
+  "stripPathPrefix": "indore",
+  "timeouts": {
+    "test": 45000,
+    "action": 15000,
+    "navigation": 20000,
+    "expect": 8000,
+    "api": 15000
+  },
+  "retries": {
+    "local": 1,
+    "ci": 2
+  },
+  "workers": {
+    "local": 0,
+    "ci": 2
+  }
+}

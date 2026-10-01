@@ -1,0 +1,16 @@
+{
+  "charts": [
+    {
+      "metric": "communication",
+      "element": "communicationChart",
+      "toggleSeries": "Communicating",
+      "smoke": true
+    },
+    {
+      "metric": "energy-loss",
+      "element": "energyLossChart",
+      "toggleSeries": "Technical",
+      "smoke": false
+    }
+  ]
+}

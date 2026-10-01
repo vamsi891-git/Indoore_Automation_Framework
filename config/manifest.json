@@ -1,0 +1,11 @@
+{
+  "defaultEnv": "local",
+  "defaultApp": "indore",
+  "environments": {
+    "local": "environments/local.json",
+    "qa": "environments/qa.json"
+  },
+  "apps": {
+    "indore": "apps/indore.json"
+  }
+}

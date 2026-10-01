@@ -1,0 +1,8 @@
+{
+  "validAdmin": {
+    "email": "{{env.EMAIL|vamsi.atthili@bestinfra.tech}}",
+    "password": "{{env.PASSWORD|V@msi1234567}}",
+    "captcha": "1234567",
+    "role": "admin"
+  }
+}

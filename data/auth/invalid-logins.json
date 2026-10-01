@@ -1,0 +1,8 @@
+{
+  "unknownPassword": {
+    "email": "operator@indore-mdms.local",
+    "password": "wrong-password",
+    "captcha": "1234567",
+    "role": "admin"
+  }
+}

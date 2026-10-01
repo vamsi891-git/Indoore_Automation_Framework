@@ -1,0 +1,11 @@
+[
+  { "path": "items", "type": "array" },
+  { "path": "items[0].id", "type": "string", "minLength": 1 },
+  { "path": "items[0].code", "type": "string", "minLength": 1 },
+  { "path": "items[0].circle", "type": "string", "minLength": 1 },
+  { "path": "items[0].load.value", "type": "number", "minimum": 0, "maximum": 500 },
+  { "path": "items[0].load.recordedAt", "type": "string", "format": "date-time" },
+  { "path": "items[0].status", "type": "string", "enum": ["online", "offline", "warning"] },
+  { "path": "items[2].locality", "type": "string", "minLength": 1 },
+  { "path": "items[2].status", "type": "string", "enum": ["online", "offline", "warning"] }
+]
