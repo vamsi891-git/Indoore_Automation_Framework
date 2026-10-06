@@ -11,7 +11,6 @@ Those facts sit in JSON files. The test asks for them by name.
 ```text
 npm test
   → read config (which app, which URLs)
-  → start the sample app when the environment says so
   → pick API tests, browser tests, or end-to-end tests
   → hand each test ready-made tools (fixtures)
   → the test calls the API or the page
@@ -52,20 +51,14 @@ The loader reads `config/manifest.json`:
 
 It then opens two JSON files:
 
-- `config/environments/local.json` — site URL, API URL, timeouts, and `startDemoServer`
+- `config/environments/local.json` — site URL, API URL, and timeouts
 - `config/apps/indore.json` — pages, Indore API paths, button ids, browsers, and where schemas live
 
-`local` points at `http://127.0.0.1:5173` and turns the sample app on. `qa` points at a real URL and leaves the sample app off.
+`local` points at `http://localhost:5173` (UI) and `http://localhost:3000` (API). Those processes must already be running. `qa` points at the live hosts.
 
-A string like `{{env.INDOOR_ADMIN_PASSWORD|admin123}}` in a dataset means: use the environment variable when it is set, otherwise use `admin123`.
+A string like `{{env.PASSWORD}}` in a dataset means: use the environment variable when it is set.
 
-### 3. The sample app starts
-
-When `startDemoServer` is true, Playwright runs `demo/server.ts` and waits until `GET /api/health` succeeds.
-
-That server is a small Indore MDMS app used so the suite can run on your machine. It serves the sign-in page and the operations dashboard, and it answers `/indore/...` using the JSON files in `data/`.
-
-### 4. Playwright splits the work into projects
+### 3. Playwright splits the work into projects
 
 The app profile lists browsers. The config builds one project per browser.
 
@@ -79,7 +72,7 @@ API tests never open a browser. Web tests open every browser listed in the profi
 
 Tests in one project run in parallel.
 
-### 5. Each test receives fixtures
+### 4. Each test receives fixtures
 
 Every spec imports `test` from `src/core/fixtures/test.fixtures.ts`, not from Playwright directly. That file adds the tools below.
 
@@ -88,51 +81,50 @@ Every spec imports `test` from `src/core/fixtures/test.fixtures.ts`, not from Pl
 | `app` | The Indore profile: routes, endpoints, test ids |
 | `env` | URLs and timeouts |
 | `data` | Readers for `data/**/*.json` |
-| `api` | A client that calls endpoints by key, such as `'health'` or `'sensors'` |
+| `api` | A client that calls endpoints by key, such as `'login'` or `'dtrs'` |
 | `schema` | The JSON Schema checker |
 | `loginPage` | The sign-in page object |
 | `dashboardPage` | The dashboard page object, already signed in |
 
 `dashboardPage` signs in through the API, then stores the token under the key named in the profile (`authToken`). The browser is signed in before your test opens the dashboard. Use `loginPage` when the test itself must click Sign in.
 
-### 6. The test runs and checks a result
+### 5. The test runs and checks a result
 
 Three checks show up often:
 
 - `expect(value).toMatchJsonSchema('health')` compares the body with `config/apps/indore/schemas/health.schema.json`
 - `expect(value).toMatchDataTypes(...)` checks types listed in a JSON file, such as “this field is a number”
-- Zod schemas in `src/core/api/models.ts` turn the JSON into typed TypeScript before the test uses fields like `body.service`
+- Zod schemas in `src/core/api/models.ts` turn the JSON into typed TypeScript before the test uses fields like `body.data.accessToken`
 
 A failure saves a screenshot. A retry saves a trace. Open the report with `npm run report`.
 
 ## Follow one API test
 
-File: `tests/api/health/health.api.spec.ts`
+File: `tests/api/auth/login.api.spec.ts`
 
 ```ts
-test('reports the active application @smoke', async ({ api, app }) => {
-  const body = await api.getParsed('health', healthSchema);
-  expect(body).toMatchJsonSchema('health');
-  expect(body.service).toBe(app.id);
+test('returns a typed access token @smoke', async ({ api, data }) => {
+  const result = await api.authenticate(data.user('validAdmin'));
+  expect(result.status).toBe(200);
+  expect(result.body.data.user.email).toBe(data.user('validAdmin').email);
 });
 ```
 
 What happens:
 
-1. The test asks for `api` and `app`. Playwright builds those fixtures.
-2. `api.getParsed('health', healthSchema)` looks up the key `health` in `config/apps/indore.json`. That key is the path `health`.
-3. The client joins it to the API base URL, so the call is `GET http://127.0.0.1:5173/health`.
-4. Zod checks that the body has `status: "ok"` and a `service` string.
-5. Ajv checks the same body against the `health` schema file.
-6. The test expects `service` to equal the profile id, `indore`.
+1. The test asks for `api` and `data`. Playwright builds those fixtures.
+2. `api.authenticate` posts to the `login` endpoint in `config/apps/indore.json`.
+3. The client joins it to the API base URL, so the call is `POST http://localhost:3000/indore/auth/login`.
+4. Zod checks that the body has `success: true` and an access token.
+5. The test expects the returned email to match `data/auth/users.json`.
 
 No browser opens.
 
-The folder `tests/api/health/` is the **Health** functionality. The title tags `@health`, `@regression`, and `@smoke` let you run a slice:
+The folder `tests/api/auth/` is the **Authentication** functionality. The title tags `@auth`, `@regression`, and `@smoke` let you run a slice:
 
 ```powershell
 npm run test:smoke
-npx playwright test --grep @health
+npx playwright test --grep @auth
 ```
 
 ## Follow one web test
@@ -153,12 +145,12 @@ What happens:
 1. `data.user('validAdmin')` reads `data/auth/users.json` and returns the Indore operator email.
 2. `loginPage.open()` goes to the route named `login` in the profile, which is `/login`.
 3. `signIn` types into the Email and Password fields. The page object finds them with `findByLabelText` from `app.ui.elements`. Other controls use `findByRole`, `findByText`, or `findByTestId`.
-4. The sample page posts to `/indore/auth/login`, stores `data.accessToken`, and moves to `/dashboard`.
+4. The page posts to the login endpoint from the app profile, stores the access token, and moves to `/dashboard`.
 5. The test checks the URL and that the DTR table is on screen.
 
 Playwright runs this file three times: Chromium, Firefox, and WebKit.
 
-`LoginPage` lives in `src/pages/login.page.ts`. It uses `FormComponent` to fill fields. That component can be reused on any form.
+`LoginPage` lives in `src/pages/login.page.ts`. `signIn` fills the email and password fields from the app profile, then submits the form.
 
 ## Follow one end-to-end test
 
@@ -171,7 +163,7 @@ This is a full user journey:
 3. The dashboard table must show the same DTR the API returned.
 4. The communication chart must show the same series the API returned.
 
-`ChartComponent` (`src/core/components/chart.component.ts`) reads the chart in this order: Chart.js, then Highcharts, then the SVG drawn by the sample app. The sample app uses SVG. A later app can use Chart.js without a new test style.
+`ChartComponent` (`src/core/components/chart.component.ts`) reads the chart in this order: Chart.js, then Highcharts, then SVG. The live dashboard can use any of those without a new test style.
 
 Chart cases for the web suite live in `data/dashboard/charts.json`. Adding a metric there, plus an element query in the app profile, covers another chart with the existing spec.
 
@@ -183,7 +175,7 @@ Chart cases for the web suite live in `data/dashboard/charts.json`. Adding a met
 | Add an API path | `endpoints` in `config/apps/indore.json` |
 | Change how a control is found | `ui.elements` in the same profile (`findByRole`, `findByLabelText`, `findByText`, or `findByTestId`) |
 | Change a password or DTR | `data/auth/users.json` or `data/assets/dtrs.json` |
-| Reject a bad login in a test | `data/auth/invalid-logins.json` (the sample app does not treat these rows as real users) |
+| Reject a bad login in a test | `data/auth/invalid-logins.json` |
 | Describe a legal API body | `config/apps/indore/schemas/*.schema.json` and the matching Zod schema in `src/core/api/models.ts` |
 | Add a screen | a new class next to `src/pages/login.page.ts` |
 | Add a test | `tests/api/<function>/`, `tests/web/<function>/`, or `tests/e2e/<function>/` |
@@ -195,8 +187,7 @@ A new spec should import `test` and `expect` from `src/core/fixtures/test.fixtur
 ```mermaid
 flowchart TD
   start["npm test"] --> config["playwright.config.ts loads config"]
-  config --> server["Sample app starts on port 5173"]
-  server --> project{"Which project?"}
+  config --> project{"Which project?"}
   project -->|api| apiFix["Fixtures: api, data, app"]
   project -->|web| webFix["Fixtures: loginPage or dashboardPage"]
   project -->|e2e| e2eFix["Fixtures: loginPage and api"]
@@ -215,7 +206,7 @@ npm run test:api
 npm run test:web
 npm run test:e2e
 npm run test:smoke
-npx playwright test tests/api/health/health.api.spec.ts
+npx playwright test tests/api/auth/login.api.spec.ts
 ```
 
-Start with the health spec. It is the shortest path through config, the API client, and a schema check.
+Start with the login API spec. It is the shortest path through config, the API client, and a schema check.

@@ -89,7 +89,7 @@ export class ApiClient {
       body: body as T,
       durationMs,
       contentType,
-      requestHeaders: headers,
+      requestHeaders: headers
     };
     this.assertStatus(result, url, method, options);
     return result;

@@ -59,7 +59,6 @@ export const environmentSchema = z
     name: z.string().min(1),
     baseUrl: z.string().url(),
     apiBaseUrl: z.string().url(),
-    startDemoServer: z.boolean(),
     stripPathPrefix: z.string().min(1).optional(),
     timeouts: z
       .object({

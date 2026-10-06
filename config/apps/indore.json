@@ -10,7 +10,6 @@
     "consumerData": "/master-data/consumers"
   },
   "endpoints": {
-    "health": "health",
     "login": "indore/auth/login",
     "me": "indore/auth/me",
     "dtrs": "indore/asset-management/dtrs",

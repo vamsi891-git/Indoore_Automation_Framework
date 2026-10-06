@@ -2,7 +2,7 @@
 
 Playwright + TypeScript framework for the MPPKVVCL Indore meter data system: API, web, and end-to-end regression. Configuration, endpoints, secrets, and JSON datasets live outside the tests.
 
-The local environment starts a sample Indore app (`demo/`) that speaks the same `/indore/...` paths as the product. The `qa` environment points at the live hosts and does not start that sample:
+`local` talks to a product you already have running (dashboard + API). `qa` talks to the live hosts:
 
 - UI: `https://mdm.mppkvvcl.bestinfra.app`
 - API: `https://api.mdm.mppkvvcl.bestinfra.app`
@@ -18,7 +18,7 @@ That API host has no `/indore` prefix, so `qa.json` sets `stripPathPrefix` to `i
 | Endpoints, keys, and config | `config/manifest.json`, `config/environments`, `config/apps` |
 | Scale to a similar app | Register another app profile. Pages and components read routes and accessible element queries from that profile |
 | Faster execution | Parallel workers, API tests use the request client (no browser), targeted waits, trace only on retry, video off |
-| Reusable components | `FormComponent`, `NavigationComponent`, `TableComponent`, `ChartComponent` |
+| Reusable components | `NavigationComponent`, `TableComponent`, `ChartComponent` |
 | Multiple browsers | `execution.webBrowsers` drives Chromium, Firefox, and WebKit projects |
 | Page object model | `src/pages` |
 | Regression grouped by functionality | Spec folders plus `@auth`, `@assets`, `@dashboard`, `@charts`, `@schema`, `@monitoring` |
@@ -30,7 +30,6 @@ That API host has no `/indore` prefix, so `qa.json` sets `stripPathPrefix` to `i
 ```text
 config/          environments, app profiles, JSON Schemas
 data/            JSON users, DTRs, metrics, chart cases, type assertions
-demo/            sample app used by the local environment
 src/core         config, API client, schema validation, fixtures, components
 src/pages        page objects
 tests/api        API regression by functionality
@@ -43,6 +42,8 @@ tests/e2e        cross-layer journeys
 ```powershell
 npm install
 npx playwright install
+copy .env.example .env
+# set EMAIL, PASSWORD, and start the local dashboard + API
 npm test
 ```
 
@@ -79,9 +80,9 @@ $env:APP_ID = "indore"
 npm test
 ```
 
-`local` starts the sample server. `qa` does not. Copy `.env.example` to `.env` when you want overrides stored locally. `.env` is gitignored.
+`local` does not start an app. Point `config/environments/local.json` (or `BASE_URL` / `API_BASE_URL`) at a dashboard and API that are already running. `qa` uses the live hosts. Copy `.env.example` to `.env` when you want overrides stored locally. `.env` is gitignored.
 
-The sample operator is `operator@indore-mdms.local` / `admin123`. Set `EMAIL` and `PASSWORD` to replace them. Do not put real passwords in JSON; use the placeholder form on `validAdmin`. Accounts in `data/auth/users.json` are accepted by the sample app. Rejected sign-in attempts live in `data/auth/invalid-logins.json`. Login uses email and returns `{ success, data: { accessToken } }`, matching Indore auth.
+Set `EMAIL` and `PASSWORD` for login tests. Do not put real passwords in JSON; use the placeholder form on `validAdmin` in `data/auth/users.json`. Rejected sign-in attempts live in `data/auth/invalid-logins.json`. Login uses email and returns `{ success, data: { accessToken } }`, matching Indore auth.
 
 ## Adding another application
 
@@ -101,13 +102,13 @@ Turn a feature off per app with `features` in the profile. Specs call `requireFe
 ```typescript
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
 
-test.describe('DTR assets @assets @regression', () => {
-  functionality('Assets');
+test.describe('Authentication API @auth @regression', () => {
+  functionality('Authentication');
 
-  test('lists DTRs', async ({ api, data }) => {
-    await api.authenticate(data.user('validAdmin'));
-    const body = await api.get('dtrs');
-    expect(body.body).toMatchJsonSchema('dtr-list');
+  test('signs in an active operator @smoke', async ({ api, data }) => {
+    const result = await api.authenticate(data.user('validAdmin'));
+    expect(result.status).toBe(200);
+    expect(result.body).toMatchJsonSchema('login');
   });
 });
 ```

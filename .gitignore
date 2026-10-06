@@ -8,3 +8,4 @@ blob-report/
 playwright/.cache/
 playwright/.auth/
 *.log
+package-lock.json

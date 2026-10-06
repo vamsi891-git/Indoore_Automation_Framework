@@ -2,8 +2,6 @@
   "name": "local",
   "baseUrl": "http://localhost:5173/",
   "apiBaseUrl": "http://localhost:3000/",
-  "startDemoServer": true,
-  "stripPathPrefix": "indore",
   "timeouts": {
     "test": 50000,
     "action": 10000,

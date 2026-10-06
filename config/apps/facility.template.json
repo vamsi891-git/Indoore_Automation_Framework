@@ -7,7 +7,6 @@
     "dashboard": "/dashboard"
   },
   "endpoints": {
-    "health": "health",
     "login": "auth/login",
     "sensors": "sensors",
     "sensorById": "sensors/{id}",

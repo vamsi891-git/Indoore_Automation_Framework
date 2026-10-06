@@ -59,14 +59,6 @@ export default defineConfig({
     locale: 'en-US',
     timezoneId: 'UTC',
   },
-  webServer: env.startDemoServer
-    ? {
-        command: 'npx tsx demo/server.ts',
-        url: `${apiBase}/health`,
-        reuseExistingServer: !process.env.CI,
-        timeout: 30_000,
-      }
-    : undefined,
   projects: [
     {
       name: 'api',
