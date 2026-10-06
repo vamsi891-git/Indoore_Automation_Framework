@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import type { ApiResult } from '../../src/core/api/api.client';
+import type { ApiResult } from '../../../src/core/api/api.client';
 
 export function expectApiHeaders(
   result: Pick<ApiResult<unknown>, 'contentType' | 'requestHeaders'>,

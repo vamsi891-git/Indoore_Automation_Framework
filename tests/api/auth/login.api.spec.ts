@@ -1,6 +1,6 @@
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
 import type { TypeAssertion } from '../../../src/core/api/schema.validator';
-import { expectApiHeaders } from '../expect-api-headers';
+import { expectApiHeaders } from '../support/expect-api-headers';
 
 test.describe('Authentication API @auth @regression', () => {
   functionality('Authentication');

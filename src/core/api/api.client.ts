@@ -3,15 +3,17 @@ import { ZodType } from 'zod';
 import { readSecret, type AppProfile, type EnvironmentConfig } from '../config/config.loader';
 import { logger } from '../utils/logger';
 import { ApiError } from './api.error';
-import { loginSchema, type LoginResponse } from './models';
+import { loginSchema, type LoginResponse } from './dashboard.schemas';
 
 export interface ApiRequestOptions {
   params?: Record<string, string>;
   query?: Record<string, string | number | boolean>;
   data?: unknown;
+  multipart?: Record<string, string | { name: string; mimeType: string; buffer: Buffer }>;
   headers?: Record<string, string>;
   expectedStatus?: number;
   failOnStatus?: boolean;
+  timeout?: number;
 }
 
 export interface ApiResult<T> {
@@ -54,12 +56,19 @@ export class ApiClient {
   private async send<T>(method: string, endpoint: string, options: ApiRequestOptions = {}): Promise<ApiResult<T>> {
     const url = this.resolve(endpoint, options);
     const headers = this.headers(options);
+    if (method !== 'GET' && method !== 'HEAD') {
+      const csrf = await this.csrfToken();
+      if (csrf) {
+        headers['X-CSRF-Token'] = csrf;
+      }
+    }
     const started = Date.now();
     const response = await this.request.fetch(url, {
       method,
       headers,
-      data: options.data,
-      timeout: this.env.timeouts.api,
+      data: options.multipart ? undefined : options.data,
+      multipart: options.multipart,
+      timeout: options.timeout ?? this.env.timeouts.api,
       failOnStatusCode: false,
     });
     const durationMs = Date.now() - started;
@@ -86,6 +95,11 @@ export class ApiClient {
     return result;
   }
 
+  private async csrfToken(): Promise<string | undefined> {
+    const state = await this.request.storageState();
+    return state.cookies.find((cookie) => cookie.name === 'csrf_token' || cookie.name === 'csrf')?.value;
+  }
+
   private headers(options: ApiRequestOptions): Record<string, string> {
     const headers: Record<string, string> = {};
     for (const [key, value] of Object.entries(this.app.headers)) {
@@ -93,7 +107,7 @@ export class ApiClient {
         headers[key] = value;
       }
     }
-    if (options.data !== undefined) {
+    if (options.data !== undefined && options.multipart === undefined) {
       headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
     }
     if (this.token) {

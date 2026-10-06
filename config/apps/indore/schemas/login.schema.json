@@ -8,7 +8,7 @@
     "success": { "type": "boolean", "enum": [true] },
     "data": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["accessToken", "expiresIn", "tokenType", "user"],
       "properties": {
         "accessToken": { "type": "string", "minLength": 1 },
@@ -16,11 +16,11 @@
         "tokenType": { "type": "string", "enum": ["Bearer"] },
         "user": {
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "required": ["email", "role"],
           "properties": {
             "email": { "type": "string", "format": "email" },
-            "role": { "type": "string", "enum": ["admin", "operator", "viewer"] }
+            "role": { "type": "string", "minLength": 1 }
           }
         }
       }
