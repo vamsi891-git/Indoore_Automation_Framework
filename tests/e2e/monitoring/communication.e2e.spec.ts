@@ -1,5 +1,5 @@
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
-import { dtrListSchema, metricsSchema } from '../../../src/core/api/models';
+import { dtrListSchema, metricsSchema } from '../../../src/core/api/dashboard.schemas';
 import { DashboardPage } from '../../../src/pages/dashboard.page';
 
 test.describe('Indore live monitoring @monitoring @regression', () => {

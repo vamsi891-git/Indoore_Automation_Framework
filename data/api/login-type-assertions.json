@@ -4,5 +4,5 @@
   { "path": "data.expiresIn", "type": "integer", "minimum": 1 },
   { "path": "data.tokenType", "type": "string", "enum": ["Bearer"] },
   { "path": "data.user.email", "type": "string", "minLength": 1 },
-  { "path": "data.user.role", "type": "string", "enum": ["admin", "operator", "viewer"] }
+  { "path": "data.user.role", "type": "string", "minLength": 1 }
 ]

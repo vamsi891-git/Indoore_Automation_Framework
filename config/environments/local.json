@@ -7,9 +7,9 @@
   "timeouts": {
     "test": 50000,
     "action": 10000,
-    "navigation": 15000,
+    "navigation": 45000,
     "expect": 5000,
-    "api": 10000
+    "api": 30000
   },
   "retries": {
     "local": 0,

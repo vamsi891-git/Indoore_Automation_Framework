@@ -22,6 +22,19 @@ type FrameworkFixtures = {
 };
 
 export const test = base.extend<FrameworkFixtures>({
+  page: async ({ page }, use, testInfo) => {
+    const headed = testInfo.project.use.headless === false;
+    const chromium = (testInfo.project.use.defaultBrowserType ?? 'chromium') === 'chromium';
+    if (headed && chromium) {
+      const client = await page.context().newCDPSession(page);
+      const { windowId } = await client.send('Browser.getWindowForTarget');
+      await client.send('Browser.setWindowBounds', {
+        windowId,
+        bounds: { windowState: 'maximized' },
+      });
+    }
+    await use(page);
+  },
   app: async ({}, use) => {
     await use(loadConfig().app);
   },

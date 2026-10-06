@@ -40,8 +40,10 @@ export class DonutComponent extends BaseComponent {
     await this.root.getByRole('button', { name: /^Open .+ details$/ }).first().waitFor();
 
     const chart = this.root.getByRole('img', { name: /donut chart/i });
-    const centerText = (await chart.innerText()).replace(/\u00a0/g, ' ');
-    const centerMatch = centerText.match(/(Total Meters|Total)\s+([\d,]+|—|–|-)/);
+    const chartText = (await chart.innerText()).replace(/\u00a0/g, ' ');
+    const rootText = (await this.root.innerText()).replace(/\u00a0/g, ' ');
+    const centerText = /(Total Meters|Analyzed meters|Total)\s+[\d,]+/.test(chartText) ? chartText : rootText;
+    const centerMatch = centerText.match(/(Total Meters|Analyzed meters|Total)\s+([\d,]+|—|–|-)/);
     if (!centerMatch) {
       throw new Error(`No center total on ${this.title}: ${centerText.replace(/\s+/g, ' ').trim()}`);
     }

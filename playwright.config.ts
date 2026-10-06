@@ -8,12 +8,12 @@ const workers = headed ? 1 : process.env.CI ? env.workers.ci : env.workers.local
 function browserUse(browser: BrowserName): Project['use'] {
   switch (browser) {
     case 'chromium':
-  return {
-    ...devices['Desktop Chrome'],
-    viewport: null,
-    deviceScaleFactor: undefined,
-    launchOptions: { args: ['--start-maximized'] },
-  };
+      return {
+        ...devices['Desktop Chrome'],
+        viewport: null,
+        deviceScaleFactor: undefined,
+        launchOptions: { args: ['--start-maximized'] },
+      };
     case 'firefox':
       return { ...devices['Desktop Firefox'] };
     case 'webkit':
