@@ -22,6 +22,7 @@ export interface ApiResult<T> {
   durationMs: number;
   contentType: string;
   requestHeaders: Record<string, string>;
+  url: string;
 }
 
 export class ApiClient {
@@ -72,10 +73,11 @@ export class ApiClient {
       failOnStatusCode: false,
     });
     const durationMs = Date.now() - started;
-    const text = await response.text();
-    let body: unknown = text;
+    const raw = await response.body();
     const contentType = response.headers()['content-type'] ?? '';
+    let body: unknown = raw;
     if (contentType.includes('application/json')) {
+      const text = raw.toString('utf8');
       try {
         body = text ? (JSON.parse(text) as unknown) : null;
       } catch {
@@ -89,7 +91,8 @@ export class ApiClient {
       body: body as T,
       durationMs,
       contentType,
-      requestHeaders: headers
+      requestHeaders: headers,
+      url,
     };
     this.assertStatus(result, url, method, options);
     return result;

@@ -389,6 +389,145 @@ export const meterStatusSchema = z
     message: z.string().optional(),
   })
   .passthrough();
+  const meterColumnSchema = z.object({ key: z.string().min(1) }).passthrough();
+
+const meterRowSchema = z
+  .object({
+    id: z.union([z.string(), z.number()]),
+    slNo: z.number().int().positive(),
+    meterSerialNumber: z.string().nullable(),
+    connection: z.string().nullable(),
+    isActiveStatus: z.boolean(),
+  })
+  .passthrough();
+
+export const dtrMasterListSchema = z
+  .object({
+    success: z.literal(true),
+    data: z
+      .object({
+        columns: z.array(z.object({ key: z.string().min(1) }).passthrough()),
+        rows: z.array(
+          z
+            .object({
+              id: z.union([z.string(), z.number()]),
+              slNo: z.number().int().positive(),
+              dtrCode: z.string().nullable().optional(),
+              meterSerialNumber: z.string().nullable().optional(),
+            })
+            .passthrough(),
+        ),
+        pagination: z
+          .object({
+            page: z.number().int().positive(),
+            limit: z.number().int().positive(),
+            total: z.number().nonnegative(),
+            totalPages: z.number().int().nonnegative(),
+          })
+          .passthrough(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+export const meterListSchema = z
+  .object({
+    success: z.literal(true),
+    data: z
+      .object({
+        columns: z.array(meterColumnSchema),
+        rows: z.array(meterRowSchema),
+        pagination: z
+          .object({
+            page: z.number().int().positive(),
+            limit: z.number().int().positive(),
+            total: z.number().nonnegative(),
+            totalPages: z.number().int().nonnegative(),
+          })
+          .passthrough(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+export const notificationStatsSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      total: z.number().nonnegative(),
+      read: z.number().nonnegative(),
+      unread: z.number().nonnegative(),
+    }).passthrough(),
+  })
+  .passthrough();
+
+export const twoFactorDevicesSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      devices: z.array(z.unknown()),
+      org2FARequired: z.boolean(),
+      canManage: z.boolean(),
+    }).passthrough(),
+  })
+  .passthrough();
+
+export const auditLogListSchema = z
+  .object({
+    success: z.literal(true),
+    data: z
+      .object({
+        logs: z.array(z.record(z.unknown())),
+        columns: z.array(
+          z
+            .object({
+              key: z.string(),
+              header: z.string(),
+            })
+            .passthrough(),
+        ),
+        actionFilterOptions: z.array(
+          z
+            .object({
+              value: z.string(),
+              label: z.string(),
+            })
+            .passthrough(),
+        ),
+        total: z.number().int().nonnegative(),
+        page: z.number().int().positive(),
+        limit: z.number().int().min(1).max(100),
+        totalPages: z.number().int().nonnegative(),
+        nextCursor: z.string().nullable().optional(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+export const rolesListSchema = z
+  .object({
+    success: z.literal(true),
+    data: z
+      .object({
+        roles: z.array(
+          z
+            .object({
+              name: z.string(),
+            })
+            .passthrough(),
+        ),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+export const apiDataSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.record(z.unknown()).or(z.array(z.unknown())),
+  })
+  .passthrough();
+
 
 export type HealthResponse = z.infer<typeof healthSchema>;
 export type ErrorResponse = z.infer<typeof errorSchema>;

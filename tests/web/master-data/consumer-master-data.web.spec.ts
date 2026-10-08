@@ -179,8 +179,22 @@ test.describe('Consumer Data @master-data @regression', () => {
     await page.route('**/master-data/consumer-master-data**', (route) =>
       route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, data: { total: 0, items: [] } }) }),
     );
+    const failed = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' &&
+        response.request().url().includes('/master-data/consumer-master-data') &&
+        response.status() === 500,
+      { timeout: 45_000 },
+    );
     await page.reload();
-    await expect(page.getByRole('alert')).toContainText('Unable to load consumer data.');
+    await failed;
+    const alert = page.getByRole('alert');
+    await expect(alert).toBeVisible({ timeout: 20_000 });
+    const shown = ((await alert.textContent()) ?? '').trim();
+    if (shown !== 'Unable to load consumer data.') {
+      console.log(`ISSUE CMD-011: a failed list shows "${shown}". The spec requires "Unable to load consumer data."`);
+    }
+    await expect(alert).toContainText('Unable to load consumer data.');
     await expect(page.getByText(/Showing\s+1[–-]10\s+of\s+0/)).toHaveCount(0);
   });
 });

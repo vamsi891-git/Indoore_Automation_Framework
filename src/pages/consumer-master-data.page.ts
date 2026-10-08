@@ -143,9 +143,13 @@ export class ConsumerMasterDataPage extends BasePage {
   async applyCommunication(label: 'Online' | 'Offline', query: 'communicating' | 'non-communicating'): Promise<ConsumerList> {
     await this.openFilters();
     const pending = this.waitForList((url) => new URL(url).searchParams.get('communicationStatus') === query);
-    await this.page.getByRole('radio', { name: label, exact: true }).or(this.page.getByRole('button', { name: label, exact: true })).first().click();
+    await this.page.getByRole('radio', { name: label, exact: true }).check({ force: true });
     await this.page.getByRole('button', { name: 'Apply Filters', exact: true }).click();
     return pending;
+  }
+
+  async resetFilters(): Promise<void> {
+    await this.resetToDefaults();
   }
 
   async clearFilters(): Promise<ConsumerList> {
