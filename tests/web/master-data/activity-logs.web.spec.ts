@@ -1,6 +1,7 @@
 import { APIRequestContext, Route } from '@playwright/test';
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
 import { ActivityLogsPage, AuditList } from '../../../src/pages/activity-logs.page';
+import { todayInAppZone } from '../../../src/core/utils/app-time';
 
 const ACTIONS: { label: string; code: string }[] = [
   { label: 'Consumer Created', code: 'consumer.created' },
@@ -370,7 +371,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
         route.fulfill({
           status: 500,
           contentType: 'application/json',
-          body: JSON.stringify({ success: false, error: { code: 'AUDIT_FAILED', message: 'Activity log service is down' } }),
+          body: data.json('payloads/mocks.json', 'auditFailed'),
         }),
       ),
     );
@@ -396,7 +397,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     await page.route('**/master-data/audit-logs**', (route) => auditApi(route, () => route.fulfill({ status: 200, contentType: 'application/json', body })));
     await page.goto(app.routes.activityLogs);
     await expect(page.getByText('Invalid JSON response')).toBeVisible();
-    body = JSON.stringify({ ok: true });
+    body = data.json('payloads/mocks.json', 'unexpectedBody');
     const unexpected = page.waitForResponse(
       (response) => response.request().method() === 'GET' && response.request().url().includes('/master-data/audit-logs?'),
       { timeout: 45_000 },
@@ -427,7 +428,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(auditBody([], [{ value: 'meter.created', label: 'Created a meter' }, { value: 'meter.command', label: 'Command' }])),
+          body: data.json('payloads/activity-logs.json', 'unknownActionsPartial'),
         }),
       ),
     );
@@ -442,7 +443,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(auditBody([], [{ value: 'meter.command', label: 'Command' }])),
+          body: data.json('payloads/activity-logs.json', 'unknownActionsEmpty'),
         }),
       ),
     );
@@ -461,20 +462,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(
-            auditBody([
-              {
-                id: 'one',
-              action: 'meter.created',
-              Time: '2026-10-08T10:00:00+05:30',
-              User: 'Tester',
-              Role: 'Admin',
-              Action: 'Meter Created',
-              Details: ['Meter E2E'],
-                IP: '10.0.0.1',
-              },
-            ]),
-          ),
+          body: data.json('payloads/activity-logs.json', 'singleRow'),
         }),
       ),
     );
@@ -493,13 +481,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(
-            auditBody([
-              { id: 'same', Time: '2026-10-08T10:00:00+05:30', User: 'First', Role: 'Admin', Action: 'Meter Created', Details: ['Same line', 'Same line'], IP: '10.0.0.1', action: 'meter.created' },
-              { id: 'same', Time: '2026-10-08T10:01:00+05:30', User: 'Second', Role: 'Admin', Action: 'Meter Created', Details: ['Other'], IP: '10.0.0.2', action: 'meter.created' },
-              { Time: '2026-10-08T10:02:00+05:30', User: 'Third', Role: 'Admin', Action: 'Meter Updated', Details: { changed: true }, IP: '—', action: 'meter.updated' },
-            ]),
-          ),
+          body: data.json('payloads/activity-logs.json', 'duplicateIds'),
         }),
       ),
     );
@@ -528,20 +510,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(
-            auditBody([
-              {
-                id: 'utc',
-                action: 'meter.created',
-                Time: '2026-10-07T18:30:00.000Z',
-                User: 'Tester',
-                Role: 'Admin',
-                Action: 'Meter Created',
-                Details: ['Clock'],
-                IP: '10.0.0.1',
-              },
-            ]),
-          ),
+          body: data.json('payloads/activity-logs.json', 'utcInstant'),
         }),
       ),
     );
@@ -560,19 +529,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(
-            auditBody(
-              [{ id: 'cols', Time: 'plain time', User: 'Tester', Note: 'Shown note' }],
-              undefined,
-              1,
-              [
-                { key: ' ', header: 'Dropped' },
-                { key: 'Note', header: '   ' },
-                { key: 'Time', header: 'Time' },
-                { key: 'User', header: 'User' },
-              ],
-            ),
-          ),
+          body: data.json('payloads/activity-logs.json', 'blankColumn'),
         }),
       ),
     );
@@ -590,7 +547,7 @@ function auditApi(route: Route, fulfill: () => Promise<void>): Promise<void> {
 }
 
 function indiaToday(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  return todayInAppZone();
 }
 
 function shift(iso: string, days: number): string {
@@ -603,34 +560,6 @@ function shift(iso: string, days: number): string {
 function longDate(iso: string): string {
   const [year, month, day] = iso.split('-').map(Number);
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(year, month - 1, day)));
-}
-
-function auditBody(
-  logs: Record<string, unknown>[],
-  actionFilterOptions: { value: string; label: string }[] = ACTIONS.map((action) => ({ value: action.code, label: action.label })),
-  total = logs.length,
-  columns: { key: string; header: string; multiline?: boolean }[] = [
-    { key: 'Time', header: 'Time' },
-    { key: 'User', header: 'User' },
-    { key: 'Role', header: 'Role' },
-    { key: 'Action', header: 'Action' },
-    { key: 'Details', header: 'Details', multiline: true },
-    { key: 'IP', header: 'IP' },
-  ],
-) {
-  return {
-    success: true,
-    data: {
-      logs,
-      columns,
-      actionFilterOptions,
-      total,
-      page: 1,
-      limit: 20,
-      totalPages: total === 0 ? 0 : 1,
-      nextCursor: null,
-    },
-  };
 }
 
 async function clearPermissionCache(page: import('@playwright/test').Page): Promise<void> {

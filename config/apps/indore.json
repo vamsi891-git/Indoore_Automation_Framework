@@ -1,6 +1,7 @@
 {
   "id": "indore",
   "name": "Indore MDMS",
+  "timezone": "Asia/Kolkata",
   "schemaDir": "apps/indore/schemas",
   "routes": {
     "login": "/login",
@@ -64,6 +65,7 @@
     "dtrSummary": "dashboard/dtr/summary",
     "dtrPowerStatus": "dashboard/dtr/power-status",
     "dtrConsumption": "dashboard/dtr/consumption",
+    "dtrConsumptionDetails": "dashboard/dtr/consumption-details",
     "dtrCommunicationStatus": "dashboard/dtr/communication-status",
     "dtrPercentageLoading": "dashboard/dtr/percentage-loading",
     "dtrLoadUnbalance": "dashboard/dtr/load-unbalance",

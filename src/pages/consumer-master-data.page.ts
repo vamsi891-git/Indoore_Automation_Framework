@@ -1,4 +1,14 @@
-import { expect, Locator, Page, Response } from '@playwright/test';
+import { expect, Locator } from '@playwright/test';
+import {
+  type ConsumerFilterHost,
+  clearedParams,
+  defaultCompanions,
+  escapeRegExp,
+  ledgerReport,
+  readList,
+  textOf,
+  expectEveryFilter as runExpectEveryFilter,
+} from '../core/components/consumer-filters';
 import { BasePage } from './base.page';
 
 export interface ConsumerList {
@@ -293,60 +303,12 @@ export class ConsumerMasterDataPage extends BasePage {
       await back.click();
     }
     const close = dialog.getByRole('button', { name: 'Close', exact: true });
-    if (await close.isVisible()) {
-      await close.click();
+    if ((await close.count()) > 0) {
+      await close.evaluate((element: HTMLElement) => element.click());
     } else {
       await this.page.keyboard.press('Escape');
     }
     await expect(dialog).toBeHidden();
-  }
-
-  async expectEveryFilter(totalMeters: number): Promise<void> {
-    await this.openFilters();
-    await expect(this.page.locator('#consumers-directory-hierarchy-level')).toBeDisabled();
-    await expect(this.page.getByRole('button', { name: 'Hierarchy entity filter', exact: true })).toBeDisabled();
-    await this.expectHierarchies();
-
-    const leaked = this.page
-      .waitForRequest((request) => request.url().includes(LIST_PATH) && request.method() === 'GET', { timeout: 1_200 })
-      .then(() => true)
-      .catch(() => false);
-    await this.chooseMenu('Filter by meter type', 'Live Meters');
-    expect(await leaked, 'a dropdown does not reload the list before Apply Filters').toBe(false);
-
-    this.expectOptionTotals(
-      'Filter by meter type',
-      await this.expectNamedOptions('Filter by meter type', (label) => {
-        if (/^live\b/i.test(label)) return (params) => params.get('meterType') === 'live';
-        if (/^test\b/i.test(label)) return (params) => params.get('meterType') === 'test';
-        throw new Error(`Meter Type option "${label}" is not Live Meters or Test Meters`);
-      }),
-      totalMeters,
-    );
-    await this.expectNamedOptions('All Meter Phases', () => (params) => positiveId(params, 'servicePointMeterPhaseTblRefId'));
-    this.expectOptionTotals(
-      'Filter by connection status',
-      await this.expectNamedOptions('Filter by connection status', () => (params) => positiveId(params, 'connectionStatusTblRefId')),
-      totalMeters,
-    );
-    this.expectOptionTotals(
-      'All Categories',
-      await this.expectNamedOptions('All Categories', () => (params) => positiveId(params, 'categoryTblRefId')),
-      totalMeters,
-    );
-    this.expectOptionTotals(
-      'Filter by device manufacturer',
-      await this.expectNamedOptions('Filter by device manufacturer', () => (params) => positiveId(params, 'deviceManufacturerTblRefId')),
-      totalMeters,
-    );
-    await this.expectNamedOptions('Filter by payment contract', (label) => {
-      if (/net meter/i.test(label)) {
-        return (params) => params.get('isNetMeter') === 'true' && !params.has('paymentContractTblRefId');
-      }
-      return (params) => positiveId(params, 'paymentContractTblRefId') && !params.has('isNetMeter');
-    });
-    await this.expectCommunication();
-    await this.expectClearAll();
   }
 
   async validateChosenLedger(): Promise<{ status: number; report: string }> {
@@ -370,141 +332,6 @@ export class ConsumerMasterDataPage extends BasePage {
       }
     }
     throw new Error('The consumer list has no row with both an IVRS number and a meter serial from the database');
-  }
-
-  private async expectNamedOptions(
-    triggerName: string,
-    matchFor: (label: string) => (params: URLSearchParams) => boolean,
-  ): Promise<Array<{ label: string; total: number }>> {
-    await this.openFilters();
-    const labels = await this.menuLabels(triggerName);
-    expect(labels.length, triggerName).toBeGreaterThan(0);
-    console.log(`CMD-003 ${triggerName}: ${labels.join(' | ')}`);
-    const totals: Array<{ label: string; total: number }> = [];
-    for (const label of labels) {
-      await this.openFilters();
-      await this.chooseMenu(triggerName, label);
-      const list = await this.applyList(matchFor(label), [queryKeyFor(triggerName, label)]);
-      console.log(`CMD-003 applied ${triggerName} = ${label}; total ${list.total}`);
-      totals.push({ label, total: list.total });
-      await expect(this.page.getByText(/\d+\s+Applied/)).toBeVisible();
-      await this.resetToDefaults();
-    }
-    return totals;
-  }
-
-  private expectOptionTotals(
-    name: string,
-    rows: Array<{ label: string; total: number }>,
-    totalMeters: number,
-  ): void {
-    const sum = rows.reduce((total, row) => total + row.total, 0);
-    console.log(
-      `CMD-003 ${name} sum: ${rows.map((row) => `${row.label} ${row.total}`).join(' + ')} = ${sum}; total meters ${totalMeters}`,
-    );
-    if (sum !== totalMeters) {
-      console.log(`ISSUE CMD-003: ${name} adds up to ${sum}. The unfiltered consumer total is ${totalMeters}.`);
-    }
-    expect.soft(sum, `${name} equals total meters`).toBe(totalMeters);
-  }
-
-  private async expectCommunication(): Promise<void> {
-    const choices: Array<{ label: 'Online' | 'Offline' | 'All'; match: (params: URLSearchParams) => boolean }> = [
-      { label: 'Online', match: (params) => params.get('communicationStatus') === 'communicating' },
-      { label: 'Offline', match: (params) => params.get('communicationStatus') === 'non-communicating' },
-      { label: 'All', match: (params) => !params.has('communicationStatus') && params.get('meterType') === 'all' },
-    ];
-    for (const choice of choices) {
-      await this.openFilters();
-      await this.page.getByRole('radio', { name: choice.label, exact: true }).check({ force: true });
-      const list = await this.applyList(choice.match, choice.label === 'All' ? [] : ['communicationStatus']);
-      console.log(`CMD-003 applied communication = ${choice.label}; total ${list.total}`);
-      if (choice.label === 'Online') {
-        await this.resetToDefaults();
-      }
-    }
-  }
-
-  private async expectHierarchies(): Promise<void> {
-    for (const kind of ['Organisation', 'Network'] as const) {
-      const path = kind === 'Organisation' ? 'organisations' : 'networks';
-      const param = kind === 'Organisation' ? 'organisationLookupId' : 'networkLookupId';
-      const other = kind === 'Organisation' ? 'networkLookupId' : 'organisationLookupId';
-      const searchName = kind === 'Organisation' ? 'Search organisation hierarchy' : 'Search network hierarchy';
-      await this.openFilters();
-      await this.chooseMenu('Hierarchy type', kind);
-      await expect(this.page.locator('#consumers-directory-hierarchy-level')).toBeEnabled();
-      await expect(this.page.getByRole('button', { name: searchName, exact: true })).toBeDisabled();
-      await this.menuTrigger('Hierarchy level to search within').click();
-      await expect(this.page.getByRole('menu').last().getByRole('menuitem').nth(1)).toBeVisible({ timeout: 20_000 });
-      await this.menuTrigger('Hierarchy level to search within').click();
-      const levels = await this.menuLabels('Hierarchy level to search within');
-      expect(levels.length, `${kind} levels`).toBeGreaterThan(0);
-      console.log(`CMD-003 ${kind} levels: ${levels.join(' > ')}`);
-      let parentId: string | null = null;
-      let parentLabel = '';
-      let previousHierarchyId: string | null = null;
-      for (const level of levels) {
-        await this.openFilters();
-        const lookupWait = this.page.waitForResponse((response) => {
-          if (!response.url().includes(`/utils/search/${path}`) || response.request().method() !== 'GET') {
-            return false;
-          }
-          const hierarchyId = new URL(response.url()).searchParams.get('hierarchyId');
-          return Boolean(hierarchyId) && hierarchyId !== previousHierarchyId;
-        }, { timeout: 20_000 });
-        await this.chooseMenu('Hierarchy level to search within', level);
-        const lookup = await lookupWait;
-        const lookupUrl = new URL(lookup.url());
-        previousHierarchyId = lookupUrl.searchParams.get('hierarchyId');
-        expect(Number(lookupUrl.searchParams.get('hierarchyId')), `${kind} ${level} hierarchyId`).toBeGreaterThan(0);
-        expect(lookupUrl.searchParams.get('limit'), `${kind} ${level} limit`).toBe('500');
-        const sentParent = lookupUrl.searchParams.get('parentId');
-        if (parentId && sentParent !== parentId) {
-          console.log(
-            `ISSUE CMD-003: ${kind} level "${level}" omitted parentId ${parentId} from "${parentLabel}". The child lookup is not limited to the selected parent.`,
-          );
-        }
-        if (parentId) {
-          expect.soft(sentParent, `${kind} ${level} parentId`).toBe(parentId);
-        }
-        const items = lookupItems(await lookup.json());
-        if (items.length === 0) {
-          console.log(`CMD-003 ${kind} ${level}: the lookup returned no entities`);
-          parentId = null;
-          parentLabel = level;
-          continue;
-        }
-        const item = items[0];
-        const selected = await this.pickHierarchyEntity(searchName, item);
-        const list = await this.applyList(
-          (params) => params.get(param) === selected.id && !params.has(other),
-          [param],
-        );
-        console.log(`CMD-003 ${kind} / ${level} / ${selected.label} (${selected.id}) total ${list.total}`);
-        parentId = selected.id;
-        parentLabel = `${level}: ${selected.label}`;
-      }
-      await this.resetToDefaults();
-    }
-  }
-
-  private async expectClearAll(): Promise<void> {
-    await this.openFilters();
-    await this.chooseMenu('Filter by meter type', 'Test Meters');
-    await this.applyList((params) => params.get('meterType') === 'test', []);
-    const clear = this.page.getByRole('button', { name: 'Clear All Filters', exact: true });
-    if (!(await clear.isVisible())) {
-      console.log('ISSUE CMD-003: Clear All Filters is not on the page when Test Meters is applied and the list has rows.');
-    }
-    expect.soft(await clear.count(), 'Clear All Filters').toBeGreaterThan(0);
-    if (await clear.isVisible()) {
-      const cleared = this.waitForList((url) => clearedParams(new URL(url).searchParams));
-      await clear.click();
-      await this.expectListProof(await cleared);
-      return;
-    }
-    await this.resetToDefaults();
   }
 
   private async resetToDefaults(): Promise<void> {
@@ -599,9 +426,11 @@ export class ConsumerMasterDataPage extends BasePage {
       return box.width > 0 && box.top >= 0 && box.left >= 0 && box.bottom <= window.innerHeight && box.right <= window.innerWidth;
     });
     if (!inView) {
-      const opener = this.page.getByRole('button', { name: 'Open navigation menu', exact: true });
-      if (await opener.isVisible()) {
-        await opener.click();
+      if ((await this.page.locator('aside.sidebar.sidebar-open').count()) === 0) {
+        const opener = this.page.getByRole('button', { name: 'Open navigation menu', exact: true });
+        if (await opener.isVisible()) {
+          await opener.evaluate((element: HTMLElement) => element.click());
+        }
       }
       await item.evaluate((element) => element.scrollIntoView({ block: 'center' }));
     }
@@ -642,122 +471,24 @@ export class ConsumerMasterDataPage extends BasePage {
       )
       .then((response) => readList(response));
   }
-}
 
-const FILTER_KEYS = [
-  'q',
-  'connectionStatusTblRefId',
-  'categoryTblRefId',
-  'meterCategory',
-  'meterPhase',
-  'servicePointMeterPhaseTblRefId',
-  'deviceManufacturerTblRefId',
-  'paymentContractTblRefId',
-  'isNetMeter',
-  'communicationStatus',
-  'fromDate',
-  'toDate',
-];
-
-function queryKeyFor(triggerName: string, label: string): string {
-  if (triggerName === 'Filter by meter type') return 'meterType';
-  if (triggerName === 'All Meter Phases') return 'servicePointMeterPhaseTblRefId';
-  if (triggerName === 'Filter by connection status') return 'connectionStatusTblRefId';
-  if (triggerName === 'All Categories') return 'categoryTblRefId';
-  if (triggerName === 'Filter by device manufacturer') return 'deviceManufacturerTblRefId';
-  if (/net meter/i.test(label)) return 'isNetMeter';
-  return 'paymentContractTblRefId';
-}
-
-function positiveId(params: URLSearchParams, key: string): boolean {
-  const value = Number(params.get(key));
-  return Number.isInteger(value) && value > 0;
-}
-
-function defaultCompanions(params: URLSearchParams, allowed: string[]): boolean {
-  if (!params.get('meterType')) {
-    return false;
+  async expectEveryFilter(totalMeters: number): Promise<void> {
+    await runExpectEveryFilter(this.filterHost(), totalMeters);
   }
-  const page = params.get('page');
-  if (page && page !== '1') {
-    return false;
+
+  private filterHost(): ConsumerFilterHost {
+    return {
+      page: this.page,
+      openFilters: () => this.openFilters(),
+      chooseMenu: (name, label) => this.chooseMenu(name, label),
+      menuLabels: (name) => this.menuLabels(name),
+      menuTrigger: (name) => this.menuTrigger(name),
+      applyList: (match, allowed) => this.applyList(match, allowed),
+      resetToDefaults: () => this.resetToDefaults(),
+      expectListProof: (list) => this.expectListProof(list),
+      waitForList: (match) => this.waitForList(match),
+      pickHierarchyEntity: (searchName, item) => this.pickHierarchyEntity(searchName, item),
+    };
   }
-  return FILTER_KEYS.every((key) => allowed.includes(key) || !params.has(key));
 }
-
-function clearedParams(params: URLSearchParams): boolean {
-  return params.get('meterType') === 'all' && defaultCompanions(params, []);
-}
-
-function lookupItems(body: unknown): Array<{ id: number; name: string }> {
-  const root = isRecord(body) ? body : {};
-  const data = isRecord(root.data) ? root.data : root;
-  const raw = data.items ?? root.items;
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  return raw.filter(isRecord).flatMap((item) => {
-    const id = Number(item.id);
-    const name = String(item.name ?? item.code ?? '').trim();
-    return Number.isInteger(id) && id > 0 && name ? [{ id, name }] : [];
-  });
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function ledgerReport(body: unknown): string {
-  const lines: string[] = [];
-  const walk = (value: unknown): void => {
-    if (typeof value === 'string') {
-      lines.push(value);
-      return;
-    }
-    if (typeof value === 'number' || typeof value === 'boolean') {
-      lines.push(String(value));
-      return;
-    }
-    if (Array.isArray(value)) {
-      value.forEach(walk);
-      return;
-    }
-    if (typeof value === 'object' && value !== null) {
-      Object.values(value).forEach(walk);
-    }
-  };
-  walk(body);
-  return lines.join('\n');
-}
-
-function textOf(item: Record<string, unknown>, keys: string[]): string {
-  for (const key of keys) {
-    const value = item[key];
-    if (typeof value === 'string' && value.trim()) {
-      return value.trim();
-    }
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return String(value);
-    }
-  }
-  return '';
-}
-
-async function readList(response: Response): Promise<ConsumerList> {
-  const body = (await response.json()) as { data?: Record<string, unknown> };
-  const data = isRecord(body.data) ? body.data : {};
-  const rawItems = data.items ?? data.rows;
-  const items = Array.isArray(rawItems) ? rawItems.filter(isRecord) : [];
-  const pagination = isRecord(data.pagination) ? data.pagination : undefined;
-  const totalValue = data.total ?? pagination?.total;
-  const total = typeof totalValue === 'number' ? totalValue : Number.NaN;
-  return { url: response.url(), status: response.status(), total, items };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export async function openConsumerData(page: Page, appRoute: string): Promise<void> {
-  await page.goto(appRoute);
-}
+

@@ -23,13 +23,13 @@ That API host has no `/indore` prefix, so `qa.json` sets `stripPathPrefix` to `i
 | Page object model | `src/pages` |
 | Regression grouped by functionality | Spec folders plus `@auth`, `@assets`, `@dashboard`, `@charts`, `@schema`, `@monitoring` |
 | Web charts | `ChartComponent` reads SVG, Chart.js, or Highcharts |
-| API schema and data types | JSON Schema (Ajv) and Zod, plus JSON type assertions |
+| API schema and data types | Zod schemas in `src/core/api/dashboard.schemas.ts`, plus JSON type assertions |
 
 ## Layout
 
 ```text
-config/          environments, app profiles, JSON Schemas
-data/            JSON users, DTRs, metrics, chart cases, type assertions
+config/          environments, app profiles, endpoints
+data/            JSON users, DTRs, metrics, chart cases, type assertions, request and mock payloads
 src/core         config, API client, schema validation, fixtures, components
 src/pages        page objects
 tests/api        API regression by functionality
@@ -88,10 +88,10 @@ Set `EMAIL` and `PASSWORD` for login tests. Do not put real passwords in JSON; u
 
 1. Copy `config/apps/facility.template.json` to `config/apps/<id>.json`.
 2. Set routes, endpoints, header names, storage keys, feature flags, element queries, and browsers.
-3. Add `config/apps/<id>/schemas/*.schema.json`. Each file's `$id` must match its file name (`dtr.schema.json` → `"dtr"`).
+3. Add Zod response schemas in `src/core/api/dashboard.schemas.ts`. Do not add a second schema file.
 4. Register the profile in `config/manifest.json`.
 5. Add an environment file, or override `BASE_URL` / `API_BASE_URL`.
-6. Add JSON datasets under `data/`.
+6. Add JSON datasets under `data/`. Request and mock payloads go in `data/payloads/` and are loaded with `data.payload` or `data.json`.
 7. Reuse the page objects when the screens match. Add a page object when they do not. Keep using the shared components.
 8. Put new specs in the functionality folder: `tests/web/<functionality>/<name>.web.spec.ts`.
 
@@ -101,6 +101,7 @@ Turn a feature off per app with `features` in the profile. Specs call `requireFe
 
 ```typescript
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
+import { loginSchema } from '../../../src/core/api/dashboard.schemas';
 
 test.describe('Authentication API @auth @regression', () => {
   functionality('Authentication');
@@ -108,7 +109,7 @@ test.describe('Authentication API @auth @regression', () => {
   test('signs in an active operator @smoke', async ({ api, data }) => {
     const result = await api.authenticate(data.user('validAdmin'));
     expect(result.status).toBe(200);
-    expect(result.body).toMatchJsonSchema('login');
+    loginSchema.parse(result.body);
   });
 });
 ```
@@ -118,10 +119,20 @@ Fixtures:
 - `app`, `env` — active profile and environment
 - `data` — JSON datasets
 - `api` — endpoint keys from the app profile (`dtrs`, `dtrById`, `metrics`, `login`, …)
-- `schema` — direct Ajv access for negative contract cases
-- `loginPage`, `dashboardPage` — page objects. `dashboardPage` signs in through the API and injects the configured storage key
+- `loginPage`, `consumersPage` — page objects. Sign in through `LoginPage`. A token written only into localStorage does not keep the SPA session.
 
-`expect(value).toMatchJsonSchema('dtr')` checks the JSON Schema for the active app. `expect(value).toMatchDataTypes(assertions)` checks the JSON type rules (string, number, integer, boolean, array, object, enum, range, ISO date-time). Zod schemas in `src/core/api/models.ts` parse responses into TypeScript types. Keep those Zod schemas aligned with the JSON Schema files; the live contract tests fail when a response drifts from either one.
+Parse API bodies with the Zod schemas in `src/core/api/dashboard.schemas.ts`. `validateDataTypes` checks the JSON type rules (string, number, integer, boolean, array, object, enum, range, ISO date-time). A login body with a bad shape must fail `loginSchema.safeParse`.
+
+## Adding a new screen
+
+1. Put the coverage markdown in `docs/`.
+2. Add the endpoints to `config/apps/indore.json`.
+3. Add Zod schemas to `src/core/api/dashboard.schemas.ts`.
+4. Add a page object in `src/pages` and shared widgets in `src/core/components`.
+5. Add API, web, and e2e specs.
+6. Tag the tests with `@smoke` or `@regression`.
+
+Test bugs are fixed in the test. Product disagreements stay red and are logged as `ISSUE` plus the case id.
 
 ## Charts
 

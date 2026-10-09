@@ -5,6 +5,7 @@ import { expect, functionality, test } from '../../../src/core/fixtures/test.fix
 import { ApiClient } from '../../../src/core/api/api.client';
 import { dtrMasterListSchema } from '../../../src/core/api/dashboard.schemas';
 import { DtrMasterDataPage, type DtrList } from '../../../src/pages/dtr-master-data.page';
+import type { ExportPayload } from '../../../src/core/data/dataset.types';
 
 const openQuery = { page: '1', limit: '10' };
 
@@ -54,10 +55,12 @@ test.describe('DTR Data UI against the API @master-data @regression', () => {
     expect(new URL(found.url).searchParams.get('q')).toBe(code);
     expect(found.total, 'search footer').toBe(await apiTotal(api, env.timeouts.api, found.url));
     const downloaded = await captureDownload(page, () => dtrs.downloadFiltered());
+    const expected = data.payload<ExportPayload>('payloads/exports.json', 'dtrDownload');
+    expected.filters.q = code;
     expect(downloaded.payload).toMatchObject({
-      resource: 'dtr',
-      mode: 'filtered',
-      filters: { q: code },
+      resource: expected.resource,
+      mode: expected.mode,
+      filters: expected.filters,
     });
     expect(await workbookDataRows(downloaded.bytes), 'workbook data rows').toBe(found.total);
   });

@@ -175,9 +175,9 @@ test.describe('Consumer Data @master-data @regression', () => {
     expect(params.has('toDate')).toBe(false);
   });
 
-  test('CMD-011 a failed list does not paint a total from the error', async ({ page }) => {
+  test('CMD-011 a failed list does not paint a total from the error', async ({ page, data }) => {
     await page.route('**/master-data/consumer-master-data**', (route) =>
-      route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, data: { total: 0, items: [] } }) }),
+      route.fulfill({ status: 500, contentType: 'application/json', body: data.json('payloads/mocks.json', 'consumerListFailed') }),
     );
     const failed = page.waitForResponse(
       (response) =>

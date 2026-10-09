@@ -1,4 +1,4 @@
-import { expect, Locator, Response } from '@playwright/test';
+import { expect, Locator, Page, Response } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export interface DtrList {
@@ -321,12 +321,19 @@ export class DtrMasterDataPage extends BasePage {
 
   private async reveal(item: Locator): Promise<Locator> {
     await item.waitFor({ state: 'attached' });
-    const opener = this.page.getByRole('button', { name: 'Open navigation menu', exact: true });
-    if (await opener.isVisible()) {
-      await opener.click();
-    }
+    await openSidebarIfClosed(this.page);
     await item.evaluate((element) => element.scrollIntoView({ block: 'center' }));
     return item;
+  }
+}
+
+async function openSidebarIfClosed(page: Page): Promise<void> {
+  if ((await page.locator('aside.sidebar.sidebar-open').count()) > 0) {
+    return;
+  }
+  const opener = page.getByRole('button', { name: 'Open navigation menu', exact: true });
+  if (await opener.isVisible()) {
+    await opener.evaluate((element: HTMLElement) => element.click());
   }
 }
 

@@ -221,15 +221,6 @@ export class MeterAssignmentPage extends BasePage {
     await expect(suggestion).toBeHidden({ timeout: 10_000 });
   }
 
-  private async pickLabeled(label: string): Promise<void> {
-    const cell = this.page.locator('.bi-consumer-form-field-grid__cell').filter({ hasText: label }).first();
-    await cell.scrollIntoViewIfNeeded();
-    await cell.getByRole('button').first().click();
-    const menu = this.page.getByRole('menu').last();
-    await expect(menu).toBeVisible({ timeout: 15_000 });
-    await menu.getByRole('menuitem').filter({ hasNotText: /^select/i }).first().click();
-  }
-
   private async pickSelect(name: RegExp): Promise<void> {
     const trigger = this.trigger(name);
     await trigger.click();

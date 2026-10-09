@@ -22,3 +22,12 @@ export interface InvalidSchemaCase {
   errorIncludes: string;
   payload: unknown;
 }
+
+export interface ExportPayload {
+  resource: string;
+  mode: string;
+  filters: Record<string, string>;
+  selectedIds?: number[];
+  selectedCodes?: string[];
+  columns?: string[];
+}

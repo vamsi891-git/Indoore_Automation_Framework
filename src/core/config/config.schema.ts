@@ -88,6 +88,7 @@ export const appSchema = z
   .object({
     id: z.string().min(1),
     name: z.string().min(1),
+    timezone: z.string().min(1).default('Asia/Kolkata'),
     schemaDir: z.string().min(1),
     routes: z.record(z.string().min(1)),
     endpoints: z.record(z.string().min(1)),

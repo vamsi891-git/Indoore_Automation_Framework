@@ -1,8 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-import Ajv, { ErrorObject } from 'ajv';
-import addFormats from 'ajv-formats';
-import { schemaDirectory } from '../config/config.loader';
 import { isRecord } from '../utils/guards';
 
 export type DataType = 'string' | 'number' | 'boolean' | 'integer' | 'array' | 'object' | 'null';
@@ -17,28 +12,7 @@ export interface TypeAssertion {
   format?: 'date-time';
 }
 
-export interface SchemaValidationResult {
-  ok: boolean;
-  errors: string[];
-}
-
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
-
-function formatAjvErrors(errors: ErrorObject[] | null | undefined): string[] {
-  return (errors ?? []).map(
-    (error) => `${error.instancePath || '/'} [${error.keyword}] ${error.message ?? ''}`.trim(),
-  );
-}
-
-function withoutMeta(schema: Record<string, unknown>): Record<string, unknown> {
-  const comparable: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(schema)) {
-    if (key !== '$id' && key !== '$schema') {
-      comparable[key] = value;
-    }
-  }
-  return comparable;
-}
 
 function lookup(data: unknown, dataPath: string): { found: boolean; value: unknown } {
   const tokens = dataPath.match(/[^.[\]]+|\[\d+\]/g) ?? [];
@@ -113,78 +87,4 @@ export function validateDataTypes(data: unknown, assertions: TypeAssertion[]): s
     }
   }
   return errors;
-}
-
-export class SchemaValidator {
-  private readonly ajv = new Ajv({ allErrors: true, strict: true });
-  private readonly rawSchemas = new Map<string, Record<string, unknown>>();
-
-  constructor(directory = schemaDirectory()) {
-    addFormats(this.ajv);
-    if (!fs.existsSync(directory)) {
-      throw new Error(`Schema directory not found: ${directory}. Set schemaDir in the app profile.`);
-    }
-
-    const files = fs.readdirSync(directory).filter((file) => file.endsWith('.schema.json'));
-    if (files.length === 0) {
-      throw new Error(`No schemas found in ${directory}`);
-    }
-
-    for (const file of files) {
-      const raw = JSON.parse(fs.readFileSync(path.join(directory, file), 'utf8')) as unknown;
-      if (!isRecord(raw) || typeof raw.$id !== 'string') {
-        throw new Error(`${file} must be an object with a string $id`);
-      }
-      const expectedId = file.replace(/\.schema\.json$/, '');
-      if (raw.$id !== expectedId) {
-        throw new Error(`${file} $id must be '${expectedId}'`);
-      }
-      this.rawSchemas.set(expectedId, raw);
-      this.ajv.addSchema(raw);
-    }
-
-    for (const name of this.rawSchemas.keys()) {
-      if (!this.ajv.getSchema(name)) {
-        throw new Error(`Failed to compile schema '${name}'`);
-      }
-    }
-    this.assertListUsesItemContract('dtr', 'dtr-list');
-  }
-
-  raw(name: string): Record<string, unknown> {
-    const schema = this.rawSchemas.get(name);
-    if (!schema) {
-      throw new Error(`Unknown schema '${name}'. Available: ${this.names().join(', ')}`);
-    }
-    return schema;
-  }
-
-  names(): string[] {
-    return [...this.rawSchemas.keys()].sort();
-  }
-
-  validate(name: string, data: unknown): SchemaValidationResult {
-    const validate = this.ajv.getSchema(name);
-    if (!validate) {
-      throw new Error(`Unknown schema '${name}'. Available: ${this.names().join(', ')}`);
-    }
-    const ok = Boolean(validate(data));
-    return { ok, errors: ok ? [] : formatAjvErrors(validate.errors) };
-  }
-
-  private assertListUsesItemContract(itemId: string, listId: string): void {
-    const item = this.rawSchemas.get(itemId);
-    const list = this.rawSchemas.get(listId);
-    if (!item || !list) {
-      return;
-    }
-    const properties = list.properties;
-    if (!isRecord(properties) || !isRecord(properties.items)) {
-      throw new Error(`${listId} schema is missing properties.items`);
-    }
-    const items = properties.items.items;
-    if (JSON.stringify(items) !== JSON.stringify(withoutMeta(item))) {
-      throw new Error(`${listId} items schema must match ${itemId}.schema.json (excluding $id and $schema)`);
-    }
-  }
 }

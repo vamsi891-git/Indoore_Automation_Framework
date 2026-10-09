@@ -1,0 +1,571 @@
+{
+  "unknownActionsPartial": {
+    "success": true,
+    "data": {
+      "logs": [],
+      "columns": [
+        {
+          "key": "Time",
+          "header": "Time"
+        },
+        {
+          "key": "User",
+          "header": "User"
+        },
+        {
+          "key": "Role",
+          "header": "Role"
+        },
+        {
+          "key": "Action",
+          "header": "Action"
+        },
+        {
+          "key": "Details",
+          "header": "Details",
+          "multiline": true
+        },
+        {
+          "key": "IP",
+          "header": "IP"
+        }
+      ],
+      "actionFilterOptions": [
+        {
+          "value": "meter.created",
+          "label": "Created a meter"
+        },
+        {
+          "value": "meter.command",
+          "label": "Command"
+        }
+      ],
+      "total": 0,
+      "page": 1,
+      "limit": 20,
+      "totalPages": 0,
+      "nextCursor": null
+    }
+  },
+  "unknownActionsEmpty": {
+    "success": true,
+    "data": {
+      "logs": [],
+      "columns": [
+        {
+          "key": "Time",
+          "header": "Time"
+        },
+        {
+          "key": "User",
+          "header": "User"
+        },
+        {
+          "key": "Role",
+          "header": "Role"
+        },
+        {
+          "key": "Action",
+          "header": "Action"
+        },
+        {
+          "key": "Details",
+          "header": "Details",
+          "multiline": true
+        },
+        {
+          "key": "IP",
+          "header": "IP"
+        }
+      ],
+      "actionFilterOptions": [
+        {
+          "value": "meter.command",
+          "label": "Command"
+        }
+      ],
+      "total": 0,
+      "page": 1,
+      "limit": 20,
+      "totalPages": 0,
+      "nextCursor": null
+    }
+  },
+  "singleRow": {
+    "success": true,
+    "data": {
+      "logs": [
+        {
+          "id": "one",
+          "action": "meter.created",
+          "Time": "2026-10-08T10:00:00+05:30",
+          "User": "Tester",
+          "Role": "Admin",
+          "Action": "Meter Created",
+          "Details": [
+            "Meter E2E"
+          ],
+          "IP": "10.0.0.1"
+        }
+      ],
+      "columns": [
+        {
+          "key": "Time",
+          "header": "Time"
+        },
+        {
+          "key": "User",
+          "header": "User"
+        },
+        {
+          "key": "Role",
+          "header": "Role"
+        },
+        {
+          "key": "Action",
+          "header": "Action"
+        },
+        {
+          "key": "Details",
+          "header": "Details",
+          "multiline": true
+        },
+        {
+          "key": "IP",
+          "header": "IP"
+        }
+      ],
+      "actionFilterOptions": [
+        {
+          "value": "consumer.created",
+          "label": "Consumer Created"
+        },
+        {
+          "value": "consumer.updated",
+          "label": "Consumer Updated"
+        },
+        {
+          "value": "consumer.deleted",
+          "label": "Consumer Deleted"
+        },
+        {
+          "value": "consumer.bulk_created",
+          "label": "Consumer Bulk Created"
+        },
+        {
+          "value": "consumer.activation_change",
+          "label": "Consumer Activation Change"
+        },
+        {
+          "value": "dtr.created",
+          "label": "DTR Created"
+        },
+        {
+          "value": "dtr.updated",
+          "label": "DTR Updated"
+        },
+        {
+          "value": "dtr.deleted",
+          "label": "DTR Deleted"
+        },
+        {
+          "value": "dtr.bulk_created",
+          "label": "DTR Bulk Created"
+        },
+        {
+          "value": "meter.created",
+          "label": "Meter Created"
+        },
+        {
+          "value": "meter.updated",
+          "label": "Meter Updated"
+        },
+        {
+          "value": "meter.deleted",
+          "label": "Meter Deleted"
+        },
+        {
+          "value": "meter.bulk_created",
+          "label": "Meter Bulk Created"
+        },
+        {
+          "value": "master_data.upload.validated",
+          "label": "Upload Validated"
+        },
+        {
+          "value": "master_data.upload.approved",
+          "label": "Upload Approved"
+        },
+        {
+          "value": "master_data.upload.rejected",
+          "label": "Upload Rejected"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "limit": 20,
+      "totalPages": 1,
+      "nextCursor": null
+    }
+  },
+  "duplicateIds": {
+    "success": true,
+    "data": {
+      "logs": [
+        {
+          "id": "same",
+          "Time": "2026-10-08T10:00:00+05:30",
+          "User": "First",
+          "Role": "Admin",
+          "Action": "Meter Created",
+          "Details": [
+            "Same line",
+            "Same line"
+          ],
+          "IP": "10.0.0.1",
+          "action": "meter.created"
+        },
+        {
+          "id": "same",
+          "Time": "2026-10-08T10:01:00+05:30",
+          "User": "Second",
+          "Role": "Admin",
+          "Action": "Meter Created",
+          "Details": [
+            "Other"
+          ],
+          "IP": "10.0.0.2",
+          "action": "meter.created"
+        },
+        {
+          "Time": "2026-10-08T10:02:00+05:30",
+          "User": "Third",
+          "Role": "Admin",
+          "Action": "Meter Updated",
+          "Details": {
+            "changed": true
+          },
+          "IP": "—",
+          "action": "meter.updated"
+        }
+      ],
+      "columns": [
+        {
+          "key": "Time",
+          "header": "Time"
+        },
+        {
+          "key": "User",
+          "header": "User"
+        },
+        {
+          "key": "Role",
+          "header": "Role"
+        },
+        {
+          "key": "Action",
+          "header": "Action"
+        },
+        {
+          "key": "Details",
+          "header": "Details",
+          "multiline": true
+        },
+        {
+          "key": "IP",
+          "header": "IP"
+        }
+      ],
+      "actionFilterOptions": [
+        {
+          "value": "consumer.created",
+          "label": "Consumer Created"
+        },
+        {
+          "value": "consumer.updated",
+          "label": "Consumer Updated"
+        },
+        {
+          "value": "consumer.deleted",
+          "label": "Consumer Deleted"
+        },
+        {
+          "value": "consumer.bulk_created",
+          "label": "Consumer Bulk Created"
+        },
+        {
+          "value": "consumer.activation_change",
+          "label": "Consumer Activation Change"
+        },
+        {
+          "value": "dtr.created",
+          "label": "DTR Created"
+        },
+        {
+          "value": "dtr.updated",
+          "label": "DTR Updated"
+        },
+        {
+          "value": "dtr.deleted",
+          "label": "DTR Deleted"
+        },
+        {
+          "value": "dtr.bulk_created",
+          "label": "DTR Bulk Created"
+        },
+        {
+          "value": "meter.created",
+          "label": "Meter Created"
+        },
+        {
+          "value": "meter.updated",
+          "label": "Meter Updated"
+        },
+        {
+          "value": "meter.deleted",
+          "label": "Meter Deleted"
+        },
+        {
+          "value": "meter.bulk_created",
+          "label": "Meter Bulk Created"
+        },
+        {
+          "value": "master_data.upload.validated",
+          "label": "Upload Validated"
+        },
+        {
+          "value": "master_data.upload.approved",
+          "label": "Upload Approved"
+        },
+        {
+          "value": "master_data.upload.rejected",
+          "label": "Upload Rejected"
+        }
+      ],
+      "total": 3,
+      "page": 1,
+      "limit": 20,
+      "totalPages": 1,
+      "nextCursor": null
+    }
+  },
+  "utcInstant": {
+    "success": true,
+    "data": {
+      "logs": [
+        {
+          "id": "utc",
+          "action": "meter.created",
+          "Time": "2026-10-07T18:30:00.000Z",
+          "User": "Tester",
+          "Role": "Admin",
+          "Action": "Meter Created",
+          "Details": [
+            "Clock"
+          ],
+          "IP": "10.0.0.1"
+        }
+      ],
+      "columns": [
+        {
+          "key": "Time",
+          "header": "Time"
+        },
+        {
+          "key": "User",
+          "header": "User"
+        },
+        {
+          "key": "Role",
+          "header": "Role"
+        },
+        {
+          "key": "Action",
+          "header": "Action"
+        },
+        {
+          "key": "Details",
+          "header": "Details",
+          "multiline": true
+        },
+        {
+          "key": "IP",
+          "header": "IP"
+        }
+      ],
+      "actionFilterOptions": [
+        {
+          "value": "consumer.created",
+          "label": "Consumer Created"
+        },
+        {
+          "value": "consumer.updated",
+          "label": "Consumer Updated"
+        },
+        {
+          "value": "consumer.deleted",
+          "label": "Consumer Deleted"
+        },
+        {
+          "value": "consumer.bulk_created",
+          "label": "Consumer Bulk Created"
+        },
+        {
+          "value": "consumer.activation_change",
+          "label": "Consumer Activation Change"
+        },
+        {
+          "value": "dtr.created",
+          "label": "DTR Created"
+        },
+        {
+          "value": "dtr.updated",
+          "label": "DTR Updated"
+        },
+        {
+          "value": "dtr.deleted",
+          "label": "DTR Deleted"
+        },
+        {
+          "value": "dtr.bulk_created",
+          "label": "DTR Bulk Created"
+        },
+        {
+          "value": "meter.created",
+          "label": "Meter Created"
+        },
+        {
+          "value": "meter.updated",
+          "label": "Meter Updated"
+        },
+        {
+          "value": "meter.deleted",
+          "label": "Meter Deleted"
+        },
+        {
+          "value": "meter.bulk_created",
+          "label": "Meter Bulk Created"
+        },
+        {
+          "value": "master_data.upload.validated",
+          "label": "Upload Validated"
+        },
+        {
+          "value": "master_data.upload.approved",
+          "label": "Upload Approved"
+        },
+        {
+          "value": "master_data.upload.rejected",
+          "label": "Upload Rejected"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "limit": 20,
+      "totalPages": 1,
+      "nextCursor": null
+    }
+  },
+  "blankColumn": {
+    "success": true,
+    "data": {
+      "logs": [
+        {
+          "id": "cols",
+          "Time": "plain time",
+          "User": "Tester",
+          "Note": "Shown note"
+        }
+      ],
+      "columns": [
+        {
+          "key": " ",
+          "header": "Dropped"
+        },
+        {
+          "key": "Note",
+          "header": "   "
+        },
+        {
+          "key": "Time",
+          "header": "Time"
+        },
+        {
+          "key": "User",
+          "header": "User"
+        }
+      ],
+      "actionFilterOptions": [
+        {
+          "value": "consumer.created",
+          "label": "Consumer Created"
+        },
+        {
+          "value": "consumer.updated",
+          "label": "Consumer Updated"
+        },
+        {
+          "value": "consumer.deleted",
+          "label": "Consumer Deleted"
+        },
+        {
+          "value": "consumer.bulk_created",
+          "label": "Consumer Bulk Created"
+        },
+        {
+          "value": "consumer.activation_change",
+          "label": "Consumer Activation Change"
+        },
+        {
+          "value": "dtr.created",
+          "label": "DTR Created"
+        },
+        {
+          "value": "dtr.updated",
+          "label": "DTR Updated"
+        },
+        {
+          "value": "dtr.deleted",
+          "label": "DTR Deleted"
+        },
+        {
+          "value": "dtr.bulk_created",
+          "label": "DTR Bulk Created"
+        },
+        {
+          "value": "meter.created",
+          "label": "Meter Created"
+        },
+        {
+          "value": "meter.updated",
+          "label": "Meter Updated"
+        },
+        {
+          "value": "meter.deleted",
+          "label": "Meter Deleted"
+        },
+        {
+          "value": "meter.bulk_created",
+          "label": "Meter Bulk Created"
+        },
+        {
+          "value": "master_data.upload.validated",
+          "label": "Upload Validated"
+        },
+        {
+          "value": "master_data.upload.approved",
+          "label": "Upload Approved"
+        },
+        {
+          "value": "master_data.upload.rejected",
+          "label": "Upload Rejected"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "limit": 20,
+      "totalPages": 1,
+      "nextCursor": null
+    }
+  }
+}

@@ -519,9 +519,11 @@ export class MeterMasterDataPage extends BasePage {
       return box.width > 0 && box.top >= 0 && box.left >= 0 && box.bottom <= window.innerHeight && box.right <= window.innerWidth;
     });
     if (!inView) {
-      const opener = this.page.getByRole('button', { name: 'Open navigation menu', exact: true });
-      if (await opener.isVisible()) {
-        await opener.click();
+      if ((await this.page.locator('aside.sidebar.sidebar-open').count()) === 0) {
+        const opener = this.page.getByRole('button', { name: 'Open navigation menu', exact: true });
+        if (await opener.isVisible()) {
+          await opener.evaluate((element: HTMLElement) => element.click());
+        }
       }
       await item.evaluate((element) => element.scrollIntoView({ block: 'center' }));
     }

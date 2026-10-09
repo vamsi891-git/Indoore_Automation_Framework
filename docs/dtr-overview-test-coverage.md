@@ -1,5 +1,14 @@
 # DTR Overview — test coverage
 
+Superseded by the October 2025 capture. Use these files instead:
+
+- Page: `docs/dtr-overview.md`
+- Web: `docs/dtr-overview-web-test-coverage.md`
+- API: `docs/dtr-overview-api-test-coverage.md`
+- E2E: `docs/dtr-overview-e2e-test-coverage.md`
+
+This file still describes a page-level period named **DTR overview period**, an Hourly choice, and widgets that ignore the month. That is not what the live page does.
+
 Page under test: `/dtr/dashboard` after sign-in.
 Heading: **DTR Overview**. Section tab: **DTR Management**.
 

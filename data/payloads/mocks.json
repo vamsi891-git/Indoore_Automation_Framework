@@ -1,0 +1,42 @@
+{
+  "meterListHolding": {
+    "success": true,
+    "data": {
+      "columns": [],
+      "rows": [],
+      "pagination": { "page": 1, "limit": 10, "total": 1, "totalPages": 1 }
+    }
+  },
+  "failed": { "success": false },
+  "pagedListFailed": {
+    "success": false,
+    "data": { "pagination": { "total": 0, "rows": [] } }
+  },
+  "consumerListFailed": {
+    "success": false,
+    "data": { "total": 0, "items": [] }
+  },
+  "plantedListTotal": {
+    "success": false,
+    "data": { "pagination": { "total": 424242 } }
+  },
+  "metricsFailed": {
+    "success": false,
+    "data": { "consumerType": { "totalConsumers": { "count": 987654321 } } }
+  },
+  "meterStatusFailed": {
+    "success": false,
+    "data": { "communicatedConsumerMeters": 987654321 }
+  },
+  "dtrSummaryFailed": {
+    "success": false,
+    "data": { "totalDtrs": { "count": 987654321 } }
+  },
+  "auditFailed": {
+    "success": false,
+    "error": { "code": "AUDIT_FAILED", "message": "Activity log service is down" }
+  },
+  "unexpectedBody": { "ok": true },
+  "emptyWrite": {},
+  "badLoginShape": { "success": true, "data": {} }
+}

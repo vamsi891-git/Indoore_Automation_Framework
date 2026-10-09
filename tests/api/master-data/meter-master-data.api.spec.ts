@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { request as playwrightRequest } from '@playwright/test';
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
+import type { ExportPayload } from '../../../src/core/data/dataset.types';
 import { METER_TEMPLATE_HEADERS, meterCells, meterSheetBuffer } from '../../support/meter-workbook';
 import { ApiClient } from '../../../src/core/api/api.client';
 import {
@@ -45,44 +46,44 @@ test.describe('Meter master data API @master-data @regression', () => {
     const first = await readMeters(api, env.timeouts.api, openQuery);
     const total = first.data.pagination.total;
     const openParams = new URL(first.url).searchParams;
-    expect.soft(openParams.get('page'), 'page').toBe('1');
-    expect.soft(openParams.get('limit'), 'limit').toBe('10');
-    expect.soft(openParams.get('isActive'), 'isActive').toBe('true');
-    expect.soft(openParams.get('mappingStatus'), 'mappingStatus').toBe('mapped');
-    expect.soft(openParams.has('q'), 'q is absent').toBe(false);
-    expect.soft(openParams.has('connection'), 'connection is absent by default').toBe(false);
-    expect.soft(openParams.has('communicationStatus'), 'communicationStatus is absent by default').toBe(false);
-    expect.soft(first.data.pagination.page, 'page').toBe(1);
-    expect.soft(first.data.pagination.limit, 'limit').toBe(10);
-    expect.soft(first.data.pagination.totalPages, 'total pages').toBe(Math.ceil(total / 10));
-    expect.soft(first.data.rows.length, 'row count').toBe(Math.min(10, total));
-    expect.soft(first.data.columns.map((column) => column.key), 'columns').toEqual(columnKeys);
-    expect.soft(first.data.rows.every((row) => row.isActiveStatus), 'active rows').toBe(true);
+    expect.soft(openParams.get('page'), 'MMA-001 page').toBe('1');
+    expect.soft(openParams.get('limit'), 'MMA-001 limit').toBe('10');
+    expect.soft(openParams.get('isActive'), 'MMA-001 isActive').toBe('true');
+    expect.soft(openParams.get('mappingStatus'), 'MMA-001 mappingStatus').toBe('mapped');
+    expect.soft(openParams.has('q'), 'MMA-001 q is absent').toBe(false);
+    expect.soft(openParams.has('connection'), 'MMA-001 connection is absent by default').toBe(false);
+    expect.soft(openParams.has('communicationStatus'), 'MMA-001 communicationStatus is absent by default').toBe(false);
+    expect.soft(first.data.pagination.page, 'MMA-001 page').toBe(1);
+    expect.soft(first.data.pagination.limit, 'MMA-001 limit').toBe(10);
+    expect.soft(first.data.pagination.totalPages, 'MMA-001 total pages').toBe(Math.ceil(total / 10));
+    expect.soft(first.data.rows.length, 'MMA-001 row count').toBe(Math.min(10, total));
+    expect.soft(first.data.columns.map((column) => column.key), 'MMA-001 columns').toEqual(columnKeys);
+    expect.soft(first.data.rows.every((row) => row.isActiveStatus), 'MMA-001 active rows').toBe(true);
 
     if (total > 20) {
       const page2 = await readMeters(api, env.timeouts.api, { ...openQuery, page: 2 });
       const page3 = await readMeters(api, env.timeouts.api, { ...openQuery, page: 3 });
-      expect.soft(page2.data.pagination.page, 'page 2').toBe(2);
-      expect.soft(page3.data.pagination.page, 'page 3').toBe(3);
-      expect.soft(page2.data.pagination.total, 'page 2 total').toBe(total);
-      expect.soft(page3.data.pagination.total, 'page 3 total').toBe(total);
-      expect.soft(String(page2.data.rows[0]?.id), 'page 2 first row').not.toBe(String(first.data.rows[0]?.id));
-      expect.soft(String(page3.data.rows[0]?.id), 'page 3 first row').not.toBe(String(first.data.rows[0]?.id));
+      expect.soft(page2.data.pagination.page, 'MMA-001 page 2').toBe(2);
+      expect.soft(page3.data.pagination.page, 'MMA-001 page 3').toBe(3);
+      expect.soft(page2.data.pagination.total, 'MMA-001 page 2 total').toBe(total);
+      expect.soft(page3.data.pagination.total, 'MMA-001 page 3 total').toBe(total);
+      expect.soft(String(page2.data.rows[0]?.id), 'MMA-001 page 2 first row').not.toBe(String(first.data.rows[0]?.id));
+      expect.soft(String(page3.data.rows[0]?.id), 'MMA-001 page 3 first row').not.toBe(String(first.data.rows[0]?.id));
     }
 
     const serial = String(first.data.rows[0]?.meterSerialNumber ?? '').trim();
-    expect.soft(serial, 'serial').not.toBe('');
+    expect.soft(serial, 'MMA-001 serial').not.toBe('');
     if (serial) {
       const found = await readMeters(api, env.timeouts.api, { ...openQuery, q: serial });
-      expect.soft(found.data.pagination.total, 'search total').toBeGreaterThan(0);
+      expect.soft(found.data.pagination.total, 'MMA-001 search total').toBeGreaterThan(0);
       expect.soft(
         found.data.rows.every((row) => String(row.meterSerialNumber ?? '').includes(serial)),
-        'search rows',
+        'MMA-001 search rows',
       ).toBe(true);
     }
 
     const blank = await readMeters(api, env.timeouts.api, { ...openQuery, q: '   ' });
-    expect.soft(blank.data.pagination.total, 'spaces are not a search').toBe(total);
+    expect.soft(blank.data.pagination.total, 'MMA-001 spaces are not a search').toBe(total);
 
     const dtr = await readMeters(api, env.timeouts.api, { ...openQuery, connection: 'dtr' });
     const consumer = await readMeters(api, env.timeouts.api, { ...openQuery, connection: 'consumer' });
@@ -92,8 +93,8 @@ test.describe('Meter master data API @master-data @regression', () => {
       const label = String(row.connection ?? '').trim().toLowerCase();
       return label !== 'dtr' && label !== 'consumer';
     });
-    expect.soft(other.length, 'every listed meter is DTR or Consumer').toBe(0);
-    expect.soft(dtrTotal + consumerTotal, 'DTR plus Consumer covers the unfiltered list').toBeGreaterThanOrEqual(total);
+    expect.soft(other.length, 'MMA-001 every listed meter is DTR or Consumer').toBe(0);
+    expect.soft(dtrTotal + consumerTotal, 'MMA-001 DTR plus Consumer covers the unfiltered list').toBeGreaterThanOrEqual(total);
     console.log(
       `MMA-001 connection: DTR ${dtrTotal} + Consumer ${consumerTotal} - unfiltered ${total} = overlap ${dtrTotal + consumerTotal - total}.`,
     );
@@ -102,7 +103,7 @@ test.describe('Meter master data API @master-data @regression', () => {
   test('MMA-001 search covers a modem serial, a padded q, no match, and a search with a filter', async ({ api, env }) => {
     const first = await readMeters(api, env.timeouts.api, openQuery);
     const serial = String(first.data.rows[0]?.meterSerialNumber ?? '').trim();
-    expect(serial, 'serial').not.toBe('');
+    expect(serial, 'MMA-001 serial').not.toBe('');
     const modem = first.data.rows
       .map((row) => String(row.modemSerialNumber ?? '').trim())
       .find((value) => value.length > 0);
@@ -110,10 +111,10 @@ test.describe('Meter master data API @master-data @regression', () => {
       console.log('ISSUE MMA-001: the first page has no modem serial, so modem-serial search was not sent.');
     } else {
       const byModem = await readMeters(api, env.timeouts.api, { ...openQuery, q: modem });
-      expect(byModem.data.pagination.total, 'modem search total').toBeGreaterThan(0);
-      expect(
+      expect.soft(byModem.data.pagination.total, 'MMA-001 modem search total').toBeGreaterThan(0);
+      expect.soft(
         byModem.data.rows.some((row) => String(row.modemSerialNumber ?? '').includes(modem) || String(row.meterSerialNumber ?? '').includes(modem)),
-        'modem search row',
+        'MMA-001 modem search row',
       ).toBe(true);
     }
 
@@ -124,19 +125,19 @@ test.describe('Meter master data API @master-data @regression', () => {
         `ISSUE MMA-001: padded q "  ${serial}  " returned ${padded.data.pagination.total}. The trimmed search returned ${trimmed.data.pagination.total}. The client trims before send.`,
       );
     }
-    expect.soft(padded.data.pagination.total, 'padded q matches the trimmed serial').toBe(trimmed.data.pagination.total);
+    expect.soft(padded.data.pagination.total, 'MMA-001 padded q matches the trimmed serial').toBe(trimmed.data.pagination.total);
 
     const missing = await readMeters(api, env.timeouts.api, { ...openQuery, q: 'NO-SUCH-METER-000' });
-    expect(missing.data.pagination.total, 'no-match total').toBe(0);
-    expect(missing.data.rows, 'no-match rows').toHaveLength(0);
+    expect.soft(missing.data.pagination.total, 'MMA-001 no-match total').toBe(0);
+    expect.soft(missing.data.rows, 'MMA-001 no-match rows').toHaveLength(0);
 
     const connection = String(first.data.rows[0]?.connection ?? '').trim().toLowerCase();
     const filter = connection === 'dtr' || connection === 'consumer' ? connection : 'dtr';
     const combined = await readMeters(api, env.timeouts.api, { ...openQuery, q: serial, connection: filter });
     const combinedParams = new URL(combined.url).searchParams;
-    expect(combinedParams.get('q'), 'search q').toBe(serial);
-    expect(combinedParams.get('connection'), 'search keeps the connection filter').toBe(filter);
-    expect(combined.data.pagination.total, 'filtered search total').toBeGreaterThan(0);
+    expect.soft(combinedParams.get('q'), 'MMA-001 search q').toBe(serial);
+    expect.soft(combinedParams.get('connection'), 'MMA-001 search keeps the connection filter').toBe(filter);
+    expect.soft(combined.data.pagination.total, 'MMA-001 filtered search total').toBeGreaterThan(0);
   });
 
   test('MMA-001 online and offline are subsets and do not overlap', async ({ api, env }) => {
@@ -144,18 +145,18 @@ test.describe('Meter master data API @master-data @regression', () => {
     const total = open.data.pagination.total;
     const online = await readMeters(api, env.timeouts.api, { ...openQuery, communicationStatus: 'communicating' });
     const offline = await readMeters(api, env.timeouts.api, { ...openQuery, communicationStatus: 'non-communicating' });
-    expect(online.data.pagination.total, 'online is a subset').toBeLessThanOrEqual(total);
-    expect(offline.data.pagination.total, 'offline is a subset').toBeLessThanOrEqual(total);
+    expect.soft(online.data.pagination.total, 'MMA-001 online is a subset').toBeLessThanOrEqual(total);
+    expect.soft(offline.data.pagination.total, 'MMA-001 offline is a subset').toBeLessThanOrEqual(total);
     const onlineSerials = online.data.rows.map((row) => String(row.meterSerialNumber ?? '').trim()).filter(Boolean).slice(0, 3);
     const offlineSerials = offline.data.rows.map((row) => String(row.meterSerialNumber ?? '').trim()).filter(Boolean).slice(0, 3);
     expect(onlineSerials.length + offlineSerials.length, 'a communication sample').toBeGreaterThan(0);
     for (const serial of onlineSerials) {
       const opposite = await readMeters(api, env.timeouts.api, { ...openQuery, q: serial, communicationStatus: 'non-communicating' });
-      expect(opposite.data.pagination.total, `${serial} is not also offline`).toBe(0);
+      expect.soft(opposite.data.pagination.total, `MMA-001 ${serial} is not also offline`).toBe(0);
     }
     for (const serial of offlineSerials) {
       const opposite = await readMeters(api, env.timeouts.api, { ...openQuery, q: serial, communicationStatus: 'communicating' });
-      expect(opposite.data.pagination.total, `${serial} is not also online`).toBe(0);
+      expect.soft(opposite.data.pagination.total, `MMA-001 ${serial} is not also online`).toBe(0);
     }
   });
 
@@ -265,21 +266,16 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(all.data.pagination.total, 'all is at least the active total').toBeGreaterThanOrEqual(0);
   });
 
-  test('MMA-004 a one-row filtered export is an xlsx', async ({ api, env }) => {
+  test('MMA-004 a one-row filtered export is an xlsx', async ({ api, env, data }) => {
     const page = await readMeters(api, env.timeouts.api, openQuery);
     const serial = String(page.data.rows[0].meterSerialNumber ?? '').trim();
     expect(serial, 'serial').not.toBe('');
     const matched = await readMeters(api, env.timeouts.api, { ...openQuery, q: serial });
+    const filtered = data.payload<ExportPayload>('payloads/exports.json', 'meterFiltered');
+    filtered.filters.q = serial;
+    filtered.columns = columnKeys;
     const exported = await api.post('consumerMasterExport', {
-      data: {
-        resource: 'meter',
-        mode: 'filtered',
-        // The export body requires isActive as the string "true". The list query accepts a boolean.
-        filters: { q: serial, isActive: 'true', mappingStatus: 'mapped' },
-        selectedIds: [],
-        selectedCodes: [],
-        columns: columnKeys,
-      },
+      data: filtered,
       failOnStatus: false,
       timeout: 60_000,
     });
@@ -300,19 +296,15 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(rows.some((row) => row.some((cell) => cell.includes(serial))), 'exported serial').toBe(true);
   });
 
-  test('MMA-004 selected export and a filtered export of more than one row', async ({ api, env }) => {
+  test('MMA-004 selected export and a filtered export of more than one row', async ({ api, env, data }) => {
     const page = await readMeters(api, env.timeouts.api, openQuery);
     const selectedId = meterExportId(page.data.rows[0]);
     expect(selectedId, 'selected id').toBeGreaterThan(0);
+    const selectedBody = data.payload<ExportPayload>('payloads/exports.json', 'meterSelected');
+    selectedBody.selectedIds = [selectedId];
+    selectedBody.columns = columnKeys;
     const selected = await api.post('consumerMasterExport', {
-      data: {
-        resource: 'meter',
-        mode: 'selected',
-        filters: {},
-        selectedIds: [selectedId],
-        selectedCodes: [],
-        columns: columnKeys,
-      },
+      data: selectedBody,
       failOnStatus: false,
       timeout: 60_000,
     });
@@ -322,15 +314,11 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(selectedRows.length - 1, 'selected export rows').toBe(1);
 
     const narrow = await narrowExport(api, env.timeouts.api);
+    const exportedBody = data.payload<ExportPayload>('payloads/exports.json', 'meterFiltered');
+    exportedBody.filters = narrow.filters;
+    exportedBody.columns = columnKeys;
     const exported = await api.post('consumerMasterExport', {
-      data: {
-        resource: 'meter',
-        mode: 'filtered',
-        filters: narrow.filters,
-        selectedIds: [],
-        selectedCodes: [],
-        columns: columnKeys,
-      },
+      data: exportedBody,
       failOnStatus: false,
       timeout: 120_000,
     });
@@ -429,7 +417,7 @@ test.describe('Meter master data API security @master-data @regression', () => {
     }
   });
 
-  test('meter export and meter upload reject a missing token and a bad bearer', async ({ app, env }) => {
+  test('meter export and meter upload reject a missing token and a bad bearer', async ({ app, env, data }) => {
     const context = await playwrightRequest.newContext();
     const anonymous = new ApiClient(context, app, env);
     try {
@@ -437,7 +425,7 @@ test.describe('Meter master data API security @master-data @regression', () => {
     const posts: Array<{ endpoint: string; options: Parameters<ApiClient['post']>[1] }> = [
       {
         endpoint: 'consumerMasterExport',
-        options: { data: { resource: 'meter', mode: 'filtered', filters: { q: '1', isActive: 'true', mappingStatus: 'mapped' } } },
+        options: { data: data.payload<ExportPayload>('payloads/exports.json', 'meterUnauthorized') },
       },
       {
         endpoint: 'meterBulkUpload',
@@ -470,12 +458,12 @@ test.describe('Meter master data API security @master-data @regression', () => {
     }
   });
 
-  test('export without a CSRF cookie returns 403 CSRF_MISSING', async ({ app, env }) => {
+  test('export without a CSRF cookie returns 403 CSRF_MISSING', async ({ app, env, data }) => {
     const context = await playwrightRequest.newContext();
     try {
       const anonymous = new ApiClient(context, app, env);
       const rejected = await anonymous.post('consumerMasterExport', {
-        data: { resource: 'meter', mode: 'filtered', filters: { q: '1', isActive: 'true', mappingStatus: 'mapped' } },
+        data: data.payload<ExportPayload>('payloads/exports.json', 'meterUnauthorized'),
         failOnStatus: false,
       });
       const body = expectApiContract(rejected, errorSchema, env.timeouts.api, 'export without csrf', {

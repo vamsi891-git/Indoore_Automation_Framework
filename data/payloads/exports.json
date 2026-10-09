@@ -1,0 +1,59 @@
+{
+  "consumerFiltered": {
+    "resource": "consumer",
+    "mode": "filtered",
+    "filters": { "q": "", "meterType": "test" }
+  },
+  "meterFiltered": {
+    "resource": "meter",
+    "mode": "filtered",
+    "filters": { "q": "", "isActive": "true", "mappingStatus": "mapped" },
+    "selectedIds": [],
+    "selectedCodes": [],
+    "columns": []
+  },
+  "meterSelected": {
+    "resource": "meter",
+    "mode": "selected",
+    "filters": {},
+    "selectedIds": [],
+    "selectedCodes": [],
+    "columns": []
+  },
+  "meterUnauthorized": {
+    "resource": "meter",
+    "mode": "filtered",
+    "filters": { "q": "1", "isActive": "true", "mappingStatus": "mapped" }
+  },
+  "dtrFiltered": {
+    "resource": "dtr",
+    "mode": "filtered",
+    "filters": {},
+    "selectedIds": [],
+    "selectedCodes": [],
+    "columns": []
+  },
+  "dtrSelected": {
+    "resource": "dtr",
+    "mode": "selected",
+    "filters": {},
+    "selectedIds": [],
+    "selectedCodes": [],
+    "columns": []
+  },
+  "dtrUnauthorized": {
+    "resource": "dtr",
+    "mode": "filtered",
+    "filters": { "q": "1" }
+  },
+  "dtrDownload": {
+    "resource": "dtr",
+    "mode": "filtered",
+    "filters": { "q": "" }
+  },
+  "meterDownload": {
+    "resource": "meter",
+    "mode": "filtered",
+    "filters": { "q": "", "isActive": "true", "mappingStatus": "mapped" }
+  }
+}

@@ -2,6 +2,7 @@
   "name": "local",
   "baseUrl": "http://localhost:5173/",
   "apiBaseUrl": "http://localhost:3000/",
+  "stripPathPrefix": "indore",
   "timeouts": {
     "test": 50000,
     "action": 10000,
@@ -14,7 +15,7 @@
     "ci": 1
   },
   "workers": {
-    "local": 0,
+    "local": 1,
     "ci": 2
   }
 }

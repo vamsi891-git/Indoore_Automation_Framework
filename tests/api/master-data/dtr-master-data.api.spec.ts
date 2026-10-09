@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { request as playwrightRequest } from '@playwright/test';
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
+import type { ExportPayload } from '../../../src/core/data/dataset.types';
 import { ApiClient } from '../../../src/core/api/api.client';
 import {
   apiDataSchema,
@@ -263,23 +264,18 @@ test.describe('DTR master data API @master-data @regression', () => {
     }
   });
 
-  test('DMA-004 a one-code filtered export is an xlsx', async ({ api, env }) => {
+  test('DMA-004 a one-code filtered export is an xlsx', async ({ api, env, data }) => {
     const page = await readDtrs(api, env.timeouts.api, openQuery);
     const code = String(page.data.rows[0]?.newDtrCode ?? page.data.rows[0]?.dtrCode ?? '').trim();
     expect(code).not.toBe('');
     const matched = await readDtrs(api, env.timeouts.api, { ...openQuery, q: code });
-    const filters = { q: code };
-    expect(filters).not.toHaveProperty('page');
-    expect(filters).not.toHaveProperty('limit');
+    const exportedBody = data.payload<ExportPayload>('payloads/exports.json', 'dtrFiltered');
+    exportedBody.filters = { q: code };
+    exportedBody.columns = columnKeys;
+    expect(exportedBody.filters).not.toHaveProperty('page');
+    expect(exportedBody.filters).not.toHaveProperty('limit');
     const exported = await api.post('consumerMasterExport', {
-      data: {
-        resource: 'dtr',
-        mode: 'filtered',
-        filters,
-        selectedIds: [],
-        selectedCodes: [],
-        columns: columnKeys,
-      },
+      data: exportedBody,
       failOnStatus: false,
       timeout: 60_000,
     });
@@ -296,19 +292,15 @@ test.describe('DTR master data API @master-data @regression', () => {
     expect(rows.length - 1).toBe(matched.data.pagination.total);
   });
 
-  test('DMA-004 selected export and a filtered export of more than one row', async ({ api, env }) => {
+  test('DMA-004 selected export and a filtered export of more than one row', async ({ api, env, data }) => {
     const page = await readDtrs(api, env.timeouts.api, openQuery);
     const selectedId = positiveId(page.data.rows[0]?.meterLookupTblRefId);
     expect(selectedId, 'selected id').toBeGreaterThan(0);
+    const selectedBody = data.payload<ExportPayload>('payloads/exports.json', 'dtrSelected');
+    selectedBody.selectedIds = [selectedId];
+    selectedBody.columns = columnKeys;
     const selected = await api.post('consumerMasterExport', {
-      data: {
-        resource: 'dtr',
-        mode: 'selected',
-        filters: {},
-        selectedIds: [selectedId],
-        selectedCodes: [],
-        columns: columnKeys,
-      },
+      data: selectedBody,
       failOnStatus: false,
       timeout: 60_000,
     });
@@ -320,15 +312,11 @@ test.describe('DTR master data API @master-data @regression', () => {
     const narrow = await narrowExport(api, env.timeouts.api);
     expect(narrow.filters).not.toHaveProperty('page');
     expect(narrow.filters).not.toHaveProperty('limit');
+    const filteredBody = data.payload<ExportPayload>('payloads/exports.json', 'dtrFiltered');
+    filteredBody.filters = narrow.filters;
+    filteredBody.columns = columnKeys;
     const exported = await api.post('consumerMasterExport', {
-      data: {
-        resource: 'dtr',
-        mode: 'filtered',
-        filters: narrow.filters,
-        selectedIds: [],
-        selectedCodes: [],
-        columns: columnKeys,
-      },
+      data: filteredBody,
       failOnStatus: false,
       timeout: 120_000,
     });
@@ -446,7 +434,7 @@ test.describe('DTR master data API security @master-data @regression', () => {
     }
   });
 
-  test('DTR export and DTR upload reject a missing token and a bad bearer', async ({ app, env }) => {
+  test('DTR export and DTR upload reject a missing token and a bad bearer', async ({ app, env, data }) => {
     const context = await playwrightRequest.newContext();
     const anonymous = new ApiClient(context, app, env);
     try {
@@ -454,7 +442,7 @@ test.describe('DTR master data API security @master-data @regression', () => {
       const posts: Array<{ endpoint: string; options: Parameters<ApiClient['post']>[1] }> = [
         {
           endpoint: 'consumerMasterExport',
-          options: { data: { resource: 'dtr', mode: 'filtered', filters: { q: '1' } } },
+          options: { data: data.payload<ExportPayload>('payloads/exports.json', 'dtrUnauthorized') },
         },
         {
           endpoint: 'dtrBulkUpload',
@@ -481,12 +469,12 @@ test.describe('DTR master data API security @master-data @regression', () => {
     }
   });
 
-  test('export without a CSRF cookie returns 403 CSRF_MISSING', async ({ app, env }) => {
+  test('export without a CSRF cookie returns 403 CSRF_MISSING', async ({ app, env, data }) => {
     const context = await playwrightRequest.newContext();
     try {
       const anonymous = new ApiClient(context, app, env);
       const rejected = await anonymous.post('consumerMasterExport', {
-        data: { resource: 'dtr', mode: 'filtered', filters: { q: '1' } },
+        data: data.payload<ExportPayload>('payloads/exports.json', 'dtrUnauthorized'),
         failOnStatus: false,
       });
       const body = expectApiContract(rejected, errorSchema, env.timeouts.api, 'export without csrf', {

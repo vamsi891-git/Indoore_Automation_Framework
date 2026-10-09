@@ -154,7 +154,7 @@ test.describe('Consumer Overview failures @dashboard @regression', () => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ success: false, data: { consumerType: { totalConsumers: { count: 987654321 } } } }),
+        body: data.json('payloads/mocks.json', 'metricsFailed'),
       }),
     );
     await page.reload();
@@ -171,11 +171,13 @@ test.describe('Consumer Overview failures @dashboard @regression', () => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ success: false, data: { communicatedConsumerMeters: 987654321 } }),
+        body: data.json('payloads/mocks.json', 'meterStatusFailed'),
       }),
     );
     await page.reload();
-    await expect(page.getByRole('main')).not.toContainText('987654321');
+    const main = page.getByRole('main');
+    await expect(main, 'dashboard shell').toBeVisible({ timeout: 20_000 });
+    await expect(main).not.toContainText('987654321');
   });
 
   test('CO-083 a failed consumer list is not treated as the card count', async ({ loginPage, data, page, app }) => {
@@ -185,7 +187,7 @@ test.describe('Consumer Overview failures @dashboard @regression', () => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ success: false, data: { pagination: { total: 424242 } } }),
+        body: data.json('payloads/mocks.json', 'plantedListTotal'),
       }),
     );
     await (await new ConsumersPage(page, app).card('Consumers')).click();
@@ -199,7 +201,7 @@ test.describe('Consumer Overview failures @dashboard @regression', () => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ success: false, data: { pagination: { total: 424242 } } }),
+        body: data.json('payloads/mocks.json', 'plantedListTotal'),
       }),
     );
     const overview = new ConsumersPage(page, app);

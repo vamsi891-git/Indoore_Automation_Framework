@@ -8,11 +8,17 @@ const workers = headed ? 1 : process.env.CI ? env.workers.ci : env.workers.local
 function browserUse(browser: BrowserName): Project['use'] {
   switch (browser) {
     case 'chromium':
+      if (headed) {
+        return {
+          ...devices['Desktop Chrome'],
+          viewport: null,
+          deviceScaleFactor: undefined,
+          launchOptions: { args: ['--start-maximized'] },
+        };
+      }
       return {
         ...devices['Desktop Chrome'],
-        viewport: null,
-        deviceScaleFactor: undefined,
-        launchOptions: { args: ['--start-maximized'] },
+        viewport: { width: 1440, height: 900 },
       };
     case 'firefox':
       return { ...devices['Desktop Firefox'] };
@@ -32,8 +38,6 @@ const e2eProjects: Project[] = app.execution.e2eBrowsers.map((browser) => ({
   testMatch: '**/e2e/**/*.spec.ts',
   use: browserUse(browser),
 }));
-
-const apiBase = env.apiBaseUrl.replace(/\/$/, '');
 
 export default defineConfig({
   testDir: './tests',
@@ -57,7 +61,7 @@ export default defineConfig({
     video: 'on',
     testIdAttribute: 'data-testid',
     locale: 'en-US',
-    timezoneId: 'UTC',
+    timezoneId: app.timezone,
   },
   projects: [
     {

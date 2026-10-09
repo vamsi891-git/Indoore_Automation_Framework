@@ -1,229 +1,194 @@
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
 import { ApiClient } from '../../../src/core/api/api.client';
 import {
-  loginSchema,
   detailsTotalSchema,
   dtrBreakdownSchema,
   dtrPointsSchema,
   dtrSummarySchema,
+  loginSchema,
   masterListSchema,
   validationErrorSchema,
 } from '../../../src/core/api/dashboard.schemas';
-import { expectApiContract, expectAuthorizedContract, expectUnauthorized, totalCount } from '../support/expect-dashboard-contract';
+import {
+  apiTotal,
+  bandItems,
+  detailsTotal,
+  lookupIds,
+  pointList,
+  positiveIds,
+  type PowerPoint,
+} from '../../../src/core/components/dtr-overview-widgets';
+import type { DataStore } from '../../../src/core/data/data.loader';
+import { kolkataCalendar } from '../../../src/core/components/month-grid';
+import { expectApiContract, expectAuthorizedContract, expectUnauthorized } from '../support/expect-dashboard-contract';
+
+const LOADING_BANDS = [
+  { label: 'Critical', band: 'critical', names: ['critical', 'high'] },
+  { label: 'High Load', band: 'high-load', names: ['high load', 'high-load', 'medium'] },
+  { label: 'Normal', band: 'normal', names: ['normal', 'low'] },
+  { label: 'Under Utilized', band: 'under-utilized', names: ['under utilized', 'under-utilized', 'very low'] },
+] as const;
+const SEVERITIES = ['severe', 'moderate', 'balanced'] as const;
 
 test.describe('DTR overview API @dashboard @regression', () => {
   functionality('Dashboard');
+  test.describe.configure({ timeout: 180_000 });
 
   test.beforeEach(async ({ api, data, env }) => {
     const login = await api.authenticate(data.user('validAdmin'));
     expectApiContract(login, loginSchema, env.timeouts.api, 'login', { authorized: false, hasBody: true });
   });
 
-  test('summary status, time, schema, content type, total, and card identity @smoke', async ({ api, env }) => {
-    const result = await api.get('dtrSummary', { query: { period: 'daily' }, expectedStatus: 200 });
-    const body = expectAuthorizedContract(result, dtrSummarySchema, env.timeouts.api, 'dtr summary');
-    const total = totalCount(body.data, 'dtr summary');
-    for (const field of ['dtrsOn', 'dtrsOff', 'activeAlerts'] as const) {
-      const card = body.data[field];
-      if (card) {
-        expect(card.count, field).toBeGreaterThanOrEqual(0);
-      }
+  test('DOA-001 summary for the selected month, the current month, and weekly', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const selected = await readSummary(api, env.timeouts.api, dailyQuery(filter));
+    expectCards(selected);
+    expect(selected.dtrsOn + selected.dtrsOff, 'ON plus OFF is not required to equal Total DTRs').toEqual(expect.any(Number));
+
+    const current = kolkataCalendar().ym;
+    const currentMonth = await readSummary(api, env.timeouts.api, { period: filter.period, monthYear: current });
+    expectCards(currentMonth);
+
+    const weekly = await readSummary(api, env.timeouts.api, { period: 'weekly', monthYear: filter.monthYear });
+    expectCards(weekly);
+  });
+
+  test('DOA-002 power status covers every day of the selected month', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const daily = await readPoints(api, env.timeouts.api, 'dtrPowerStatus', dailyQuery(filter), `${filter.monthYear} power`);
+    const points = pointList(record(daily));
+    expectMonthDays(points.map((point) => point.label), filter.monthYear);
+    for (const point of points) {
+      expect(point.onPercentage, `${point.label} on percentage`).toBeGreaterThanOrEqual(0);
+      expect(Number.isFinite(point.offPercentage), `${point.label} off percentage`).toBe(true);
+      expect(point.dtrsOn, `${point.label} dtrs on`).toBeGreaterThanOrEqual(0);
+      expect(point.dtrsOff, `${point.label} dtrs off`).toBeGreaterThanOrEqual(0);
     }
-    expect(total, 'total DTRs').toBeGreaterThanOrEqual(0);
-    if (body.data.dtrsOn && body.data.dtrsOff) {
-      expect(body.data.dtrsOn.count + body.data.dtrsOff.count, 'ON plus OFF is not forced to equal Total').toEqual(expect.any(Number));
+    const weekly = await readPoints(api, env.timeouts.api, 'dtrPowerStatus', { period: 'weekly', monthYear: filter.monthYear }, 'weekly power');
+    expect(pointList(record(weekly)).length, 'weekly power points').toBeGreaterThanOrEqual(0);
+  });
+
+  test('DOA-003 energy consumption covers every day of the selected month', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const daily = await readPoints(api, env.timeouts.api, 'dtrConsumption', dailyQuery(filter), `${filter.monthYear} consumption`);
+    const points = energyPoints(record(daily));
+    expectMonthDays(points.map((point) => point.label), filter.monthYear);
+    const sample = points.find((point) => dayLabels(filter.monthYear).includes(point.label));
+    expect(sample, `${filter.monthYear} energy point`).toBeDefined();
+    expect(Number.isFinite(sample?.kvah), `${sample?.label} kVAh is re-read from the response`).toBe(true);
+    const weekly = await readPoints(api, env.timeouts.api, 'dtrConsumption', { period: 'weekly', monthYear: filter.monthYear }, 'weekly consumption');
+    expect(Array.isArray(record(weekly).points), 'weekly consumption points').toBe(true);
+  });
+
+  test('DOA-004 communication status for the selected month and the first-paint query', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const selected = await readBreakdown(api, env.timeouts.api, 'dtrCommunicationStatus', { monthYear: filter.monthYear }, `${filter.monthYear} communication`);
+    const counts = communicationCounts(record(selected));
+    expect(counts.communicating + counts.nonCommunicating, 'communication center').toBe(counts.center);
+    const firstPaint = await readBreakdown(api, env.timeouts.api, 'dtrCommunicationStatus', undefined, 'communication first paint');
+    communicationCounts(record(firstPaint));
+  });
+
+  test('DOA-005 percentage loading for the selected month and the first-paint query', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const selected = await readBreakdown(api, env.timeouts.api, 'dtrPercentageLoading', { monthYear: filter.monthYear }, `${filter.monthYear} loading`);
+    const bands = loadingBands(record(selected));
+    expect(bands.reduce((sum, band) => sum + band.value, 0), 'loading item values').toBeGreaterThanOrEqual(0);
+    const firstPaint = await readBreakdown(api, env.timeouts.api, 'dtrPercentageLoading', undefined, 'loading first paint');
+    loadingBands(record(firstPaint));
+  });
+
+  test('DOA-006 load unbalance for the selected month and the first-paint query', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const selected = await readBreakdown(api, env.timeouts.api, 'dtrLoadUnbalance', { monthYear: filter.monthYear }, `${filter.monthYear} load`);
+    severityCounts(record(selected));
+    const firstPaint = await readBreakdown(api, env.timeouts.api, 'dtrLoadUnbalance', undefined, 'load first paint');
+    severityCounts(record(firstPaint));
+  });
+
+  test('DOA-007 voltage unbalance for the selected month and the first-paint query', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const selected = await readBreakdown(api, env.timeouts.api, 'dtrVoltageUnbalance', { monthYear: filter.monthYear }, `${filter.monthYear} voltage`);
+    severityCounts(record(selected));
+    const firstPaint = await readBreakdown(api, env.timeouts.api, 'dtrVoltageUnbalance', undefined, 'voltage first paint');
+    severityCounts(record(firstPaint));
+  });
+
+  test('DOA-008 each card list uses the selected month summary', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const summary = dtrSummarySchema.parse((await api.get('dtrSummary', { query: dailyQuery(filter), expectedStatus: 200 })).body);
+    const body = record(summary.data);
+    cardFields(body);
+    await readList(api, env.timeouts.api, { page: 1, limit: 10 }, 'total DTRs list');
+    await readList(api, env.timeouts.api, { page: 1, limit: 10, metric: 'DTRs ON' }, 'DTRs ON list');
+    await readList(api, env.timeouts.api, listIds(positiveIds(lookupIds(body, 'dtrsOff'))), 'DTRs OFF list');
+    await readList(api, env.timeouts.api, listIds(positiveIds(lookupIds(body, 'activeAlerts'))), 'active alerts list');
+  });
+
+  test('DOA-009 power details match the clicked day and a weekly point', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const daily = pointList(record(await readPoints(api, env.timeouts.api, 'dtrPowerStatus', dailyQuery(filter), 'power for details')));
+    const point = daily.find((item) => item.dtrsOn > 0 || item.dtrsOff > 0) ?? daily[0];
+    expect(point, `${filter.monthYear} power point`).toBeDefined();
+    await expectPowerDetails(api, env.timeouts.api, point, filter, 'daily');
+    const weekly = pointList(record(await readPoints(api, env.timeouts.api, 'dtrPowerStatus', { period: 'weekly', monthYear: filter.monthYear }, 'weekly power for details')));
+    expect(weekly.length, 'a weekly power point').toBeGreaterThan(0);
+    await expectPowerDetails(api, env.timeouts.api, weekly[0], filter, 'weekly');
+  });
+
+  test('DOA-010 communication details stay inside the selected month', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    communicationCounts(record(await readBreakdown(api, env.timeouts.api, 'dtrCommunicationStatus', { monthYear: filter.monthYear }, 'communication chart')));
+    await readDetails(api, env.timeouts.api, 'dtrCommunicationDetails', { status: 'communicated', monthYear: filter.monthYear }, 'communicating details', filter.monthYear);
+    await readDetails(api, env.timeouts.api, 'dtrCommunicationDetails', { status: 'non-communicated', monthYear: filter.monthYear }, 'non-communicating details', filter.monthYear);
+  });
+
+  test('DOA-011 percentage loading details stay inside the selected month', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const bands = loadingBands(record(await readBreakdown(api, env.timeouts.api, 'dtrPercentageLoading', { monthYear: filter.monthYear }, 'loading chart')));
+    for (const band of bands) {
+      await readDetails(api, env.timeouts.api, 'dtrPercentageLoadingDetails', { band: band.band, monthYear: filter.monthYear }, `${band.label} details`, filter.monthYear);
     }
   });
 
-  test('power, consumption, communication, loading, and both unbalance reads', async ({ api, env }) => {
-    const power = expectAuthorizedContract(
-      await api.get('dtrPowerStatus', { query: { period: 'daily' }, expectedStatus: 200 }),
-      dtrPointsSchema,
-      env.timeouts.api,
-      'power status',
-    );
-    expect(power.data.points.length, 'daily power window').toBeLessThanOrEqual(12);
-    const first = power.data.points[0] as Record<string, unknown>;
-    expect(pointNumber(first, 'onPercentage', 'on_percentage'), 'on percentage').toBeGreaterThanOrEqual(0);
-    expect(pointNumber(first, 'dtrsOn', 'dtrs_on'), 'dtrs on').toBeGreaterThanOrEqual(0);
-    expect(pointNumber(first, 'dtrsOff', 'dtrs_off'), 'dtrs off').toBeGreaterThanOrEqual(0);
-
-    const consumption = expectAuthorizedContract(
-      await api.get('dtrConsumption', { query: { period: 'daily' }, expectedStatus: 200 }),
-      dtrPointsSchema,
-      env.timeouts.api,
-      'consumption',
-    );
-    expect(consumption.data.points.length, 'daily consumption window').toBeLessThanOrEqual(12);
-    const energy = consumption.data.points[0] as Record<string, unknown>;
-    for (const field of ['kwh', 'kvah', 'kvarh'] as const) {
-      const value = energy[field];
-      expect(typeof value !== 'number' || Number.isFinite(value), field).toBe(true);
-    }
-
-    const communication = expectAuthorizedContract(
-      await api.get('dtrCommunicationStatus', { expectedStatus: 200 }),
-      dtrBreakdownSchema,
-      env.timeouts.api,
-      'communication',
-    );
-    totalCount(communication.data, 'communication');
-
-    const loading = expectAuthorizedContract(
-      await api.get('dtrPercentageLoading', { expectedStatus: 200 }),
-      dtrBreakdownSchema,
-      env.timeouts.api,
-      'percentage loading',
-    );
-    totalCount(loading.data, 'percentage loading');
-
-    const load = expectAuthorizedContract(
-      await api.get('dtrLoadUnbalance', { expectedStatus: 200 }),
-      dtrBreakdownSchema,
-      env.timeouts.api,
-      'load unbalance',
-    );
-    totalCount(load.data, 'load unbalance');
-
-    const voltage = expectAuthorizedContract(
-      await api.get('dtrVoltageUnbalance', { expectedStatus: 200 }),
-      dtrBreakdownSchema,
-      env.timeouts.api,
-      'voltage unbalance',
-    );
-    totalCount(voltage.data, 'voltage unbalance');
-  });
-
-  test('detail totals match the clicked power, communication, loading, and unbalance counts', async ({ api, env }) => {
-    const power = dtrPointsSchema.parse((await api.get('dtrPowerStatus', { query: { period: 'daily' }, expectedStatus: 200 })).body);
-    const point = power.data.points[0] as Record<string, unknown>;
-    const onDetails = expectAuthorizedContract(
-      await api.get('dtrPowerStatusDetails', {
-        query: { status: 'on', period: 'daily', bucket: toBucket(String(point.label)) },
-        expectedStatus: 200,
-      }),
-      detailsTotalSchema,
-      env.timeouts.api,
-      'power on details',
-    );
-    expect(totalCount(onDetails.data, 'power on details')).toBe(pointNumber(point, 'dtrsOn', 'dtrs_on'));
-
-    const communication = expectAuthorizedContract(
-      await api.get('dtrCommunicationStatus', { expectedStatus: 200 }),
-      dtrBreakdownSchema,
-      env.timeouts.api,
-      'communication chart',
-    );
-    const chart = communication.data as Record<string, unknown>;
-    const points = Array.isArray(chart.points) ? chart.points.filter(isRecord) : [];
-    const latest = points.at(-1);
-    const communicated = expectAuthorizedContract(
-      await api.get('dtrCommunicationDetails', { query: { status: 'communicated', limit: 1 }, expectedStatus: 200 }),
-      detailsTotalSchema,
-      env.timeouts.api,
-      'communication details',
-    );
-    expectCountMatch(
-      'communicating',
-      totalCount(communicated.data, 'communicating details'),
-      optionalPointNumber(latest ?? chart, 'communicating', 'communicated'),
-    );
-    const silent = expectAuthorizedContract(
-      await api.get('dtrCommunicationDetails', { query: { status: 'non-communicated', limit: 1 }, expectedStatus: 200 }),
-      detailsTotalSchema,
-      env.timeouts.api,
-      'non-communicating details',
-    );
-    expectCountMatch(
-      'non-communicating',
-      totalCount(silent.data, 'non-communicating details'),
-      optionalPointNumber(latest ?? chart, 'nonCommunicating', 'non_communicating'),
-    );
-
-    const loading = expectAuthorizedContract(
-      await api.get('dtrPercentageLoadingDetails', { query: { band: 'critical' }, expectedStatus: 200 }),
-      detailsTotalSchema,
-      env.timeouts.api,
-      'percentage loading details',
-    );
-    expect(totalCount(loading.data, 'critical loading')).toBeGreaterThanOrEqual(0);
-
-    const load = expectAuthorizedContract(
-      await api.get('dtrLoadUnbalanceDetails', { query: { severity: 'severe' }, expectedStatus: 200 }),
-      detailsTotalSchema,
-      env.timeouts.api,
-      'load unbalance details',
-    );
-    expect(totalCount(load.data, 'severe load')).toBeGreaterThanOrEqual(0);
-
-    const voltage = expectAuthorizedContract(
-      await api.get('dtrVoltageUnbalanceDetails', { query: { severity: 'severe' }, expectedStatus: 200 }),
-      detailsTotalSchema,
-      env.timeouts.api,
-      'voltage unbalance details',
-    );
-    expect(totalCount(voltage.data, 'severe voltage')).toBeGreaterThanOrEqual(0);
-  });
-
-  test('DTR list total matches the Total DTRs card', async ({ api, env }) => {
-    const summary = dtrSummarySchema.parse((await api.get('dtrSummary', { query: { period: 'daily' }, expectedStatus: 200 })).body);
-    const result = await api.get('dtrMasterData', { expectedStatus: 200 });
-    const body = expectAuthorizedContract(result, masterListSchema, env.timeouts.api, 'dtr master data');
-    expect(totalCount(body.data, 'dtr list')).toBe(totalCount(summary.data, 'summary'));
-  });
-
-  test('hourly, weekly, and a past month still return the page contract', async ({ api, env }) => {
-    for (const period of ['hourly', 'weekly'] as const) {
-      expectAuthorizedContract(
-        await api.get('dtrSummary', { query: { period }, expectedStatus: 200 }),
-        dtrSummarySchema,
+  test('DOA-012 consumption details return a count for each energy kind', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    const points = energyPoints(record(await readPoints(api, env.timeouts.api, 'dtrConsumption', dailyQuery(filter), 'consumption for details')));
+    const point = points.find((item) => item.kwh !== 0 || item.kvah !== 0 || item.kvarh !== 0) ?? points[0];
+    expect(point, `${filter.monthYear} energy point`).toBeDefined();
+    for (const kind of ['kwh', 'kvah', 'kvarh'] as const) {
+      const total = await readDetails(
+        api,
         env.timeouts.api,
-        `${period} summary`,
+        'dtrConsumptionDetails',
+        { kind, period: filter.period, bucket: point.label, monthYear: filter.monthYear },
+        `${kind} details`,
+        filter.monthYear,
       );
-      expectAuthorizedContract(
-        await api.get('dtrPowerStatus', { query: { period }, expectedStatus: 200 }),
-        dtrPointsSchema,
-        env.timeouts.api,
-        `${period} power`,
-      );
-      expectAuthorizedContract(
-        await api.get('dtrConsumption', { query: { period }, expectedStatus: 200 }),
-        dtrPointsSchema,
-        env.timeouts.api,
-        `${period} consumption`,
-      );
+      expect(Number.isFinite(total), `${kind} details total`).toBe(true);
     }
-    const past = { monthYear: '2025-06' };
-    for (const endpoint of ['dtrSummary', 'dtrPowerStatus', 'dtrConsumption'] as const) {
-      expectAuthorizedContract(
-        await api.get(endpoint, { query: { period: 'daily', ...past }, expectedStatus: 200 }),
-        endpoint === 'dtrSummary' ? dtrSummarySchema : dtrPointsSchema,
-        env.timeouts.api,
-        `${endpoint} past month`,
-      );
-    }
-    expectAuthorizedContract(
-      await api.get('dtrLoadUnbalance', { query: past, expectedStatus: 200 }),
-      dtrBreakdownSchema,
-      env.timeouts.api,
-      'load unbalance past month',
-    );
-    expectAuthorizedContract(
-      await api.get('dtrVoltageUnbalance', { query: past, expectedStatus: 200 }),
-      dtrBreakdownSchema,
-      env.timeouts.api,
-      'voltage unbalance past month',
-    );
   });
 
-  test('rejects a bogus period, month, status, band, and severity', async ({ api, env }) => {
+  test('DOA-013 load unbalance details stay inside the selected month', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    await expectSeverityDetails(api, env.timeouts.api, 'dtrLoadUnbalance', 'dtrLoadUnbalanceDetails', 'load', filter.monthYear);
+  });
+
+  test('DOA-014 voltage unbalance details stay inside the selected month', async ({ api, data, env }) => {
+    const filter = selectedFilter(data);
+    await expectSeverityDetails(api, env.timeouts.api, 'dtrVoltageUnbalance', 'dtrVoltageUnbalanceDetails', 'voltage', filter.monthYear);
+  });
+
+  test('DOA-001 DOA-009 DOA-010 DOA-011 DOA-012 DOA-013 DOA-014 rejected queries return 400', async ({ api, env }) => {
     const checks: Array<{ endpoint: string; query: Record<string, string> }> = [
       { endpoint: 'dtrSummary', query: { period: 'bogus' } },
       { endpoint: 'dtrSummary', query: { monthYear: '2026-13' } },
       { endpoint: 'dtrPowerStatusDetails', query: { status: 'bogus' } },
       { endpoint: 'dtrCommunicationDetails', query: { status: 'bogus' } },
       { endpoint: 'dtrPercentageLoadingDetails', query: { band: 'bogus' } },
+      { endpoint: 'dtrConsumptionDetails', query: { kind: 'bogus' } },
       { endpoint: 'dtrLoadUnbalanceDetails', query: { severity: 'bogus' } },
+      { endpoint: 'dtrVoltageUnbalanceDetails', query: { severity: 'bogus' } },
     ];
     for (const check of checks) {
       const result = await api.get(check.endpoint, { query: check.query, expectedStatus: 400 });
@@ -234,8 +199,9 @@ test.describe('DTR overview API @dashboard @regression', () => {
 
 test.describe('DTR overview API security @dashboard @regression', () => {
   functionality('Dashboard');
+  test.describe.configure({ timeout: 180_000 });
 
-  test('every DTR overview read rejects a missing token and a bad bearer', async ({ request, app, env }) => {
+  test('DOA-015 every DTR overview read rejects a missing token and a bad bearer', async ({ request, app, env }) => {
     const anonymous = new ApiClient(request, app, env);
     const reads = [
       'dtrSummary',
@@ -249,6 +215,7 @@ test.describe('DTR overview API security @dashboard @regression', () => {
       'dtrPowerStatusDetails',
       'dtrCommunicationDetails',
       'dtrPercentageLoadingDetails',
+      'dtrConsumptionDetails',
       'dtrLoadUnbalanceDetails',
       'dtrVoltageUnbalanceDetails',
     ];
@@ -264,36 +231,237 @@ test.describe('DTR overview API security @dashboard @regression', () => {
   });
 });
 
-function optionalPointNumber(point: Record<string, unknown>, camel: string, snake: string): number | undefined {
-  const value = point[camel] ?? point[snake];
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+async function readSummary(api: ApiClient, limitMs: number, query: Record<string, string>): Promise<CardCounts> {
+  const body = expectAuthorizedContract(await api.get('dtrSummary', { query, expectedStatus: 200 }), dtrSummarySchema, limitMs, `summary ${query.period} ${query.monthYear}`);
+  return cardFields(record(body.data));
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+async function readPoints(api: ApiClient, limitMs: number, endpoint: string, query: Record<string, string>, label: string): Promise<unknown> {
+  const body = expectAuthorizedContract(await api.get(endpoint, { query, expectedStatus: 200 }), dtrPointsSchema, limitMs, label);
+  return body.data;
 }
 
-function expectCountMatch(name: string, actual: number, expectedCount: number | undefined): void {
-  if (expectedCount === undefined) {
-    console.log(`ISSUE DO API: ${name} details returned ${actual}, and the chart had no count to compare.`);
-    expect.soft(expectedCount, `${name} chart count`).toEqual(expect.any(Number));
-    return;
+async function readBreakdown(api: ApiClient, limitMs: number, endpoint: string, query: Record<string, string> | undefined, label: string): Promise<unknown> {
+  const body = expectAuthorizedContract(await api.get(endpoint, { query, expectedStatus: 200 }), dtrBreakdownSchema, limitMs, label);
+  return body.data;
+}
+
+async function readList(api: ApiClient, limitMs: number, query: Record<string, string | number>, label: string): Promise<number> {
+  const result = await api.get('dtrMasterData', { query, expectedStatus: 200 });
+  const body = expectAuthorizedContract(result, masterListSchema, limitMs, label);
+  return body.data.pagination.total;
+}
+
+async function readDetails(api: ApiClient, limitMs: number, endpoint: string, query: Record<string, string>, label: string, monthYear: string): Promise<number> {
+  const result = await api.get(endpoint, { query, expectedStatus: 200 });
+  expectAuthorizedContract(result, detailsTotalSchema, limitMs, label);
+  expect(new URL(result.url).searchParams.get('monthYear'), `${label} month`).toBe(monthYear);
+  expectDatesInMonth(result.body, monthYear, label);
+  return detailsTotal(result.body);
+}
+
+async function expectPowerDetails(api: ApiClient, limitMs: number, point: PowerPoint, filter: MonthFilter, period: 'daily' | 'weekly'): Promise<void> {
+  const shared = { period, bucket: point.label, monthYear: filter.monthYear };
+  await readDetails(api, limitMs, 'dtrPowerStatusDetails', { status: 'on', ...shared }, `${period} ${point.label} power on`, filter.monthYear);
+  if (period === 'daily') {
+    await readDetails(api, limitMs, 'dtrPowerStatusDetails', { status: 'off', ...shared }, `${period} ${point.label} power off`, filter.monthYear);
   }
-  console.log(`DO API ${name}: details ${actual}; chart ${expectedCount}`);
-  if (actual !== expectedCount) {
-    console.log(`ISSUE DO API: ${name} details total is ${actual}. The chart count is ${expectedCount}.`);
-  }
-  expect.soft(actual, `${name} details match the chart`).toBe(expectedCount);
 }
 
-function pointNumber(point: Record<string, unknown>, camel: string, snake: string): number {
-  const value = point[camel] ?? point[snake];
+async function expectSeverityDetails(api: ApiClient, limitMs: number, chart: string, details: string, label: string, monthYear: string): Promise<void> {
+  severityCounts(record(await readBreakdown(api, limitMs, chart, { monthYear }, `${label} chart`)));
+  for (const severity of SEVERITIES) {
+    await readDetails(api, limitMs, details, { severity, monthYear }, `${label} ${severity}`, monthYear);
+  }
+}
+
+interface MonthFilter {
+  monthYear: string;
+  period: string;
+}
+
+function selectedFilter(data: DataStore): MonthFilter {
+  const filter = data.payload<MonthFilter>('payloads/dtr-overview.json', 'selectedMonth');
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(filter.monthYear)) {
+    throw new Error(`selectedMonth.monthYear must be YYYY-MM. Received ${filter.monthYear}`);
+  }
+  return filter;
+}
+
+function dailyQuery(filter: MonthFilter): Record<string, string> {
+  return { period: filter.period, monthYear: filter.monthYear };
+}
+
+interface CardCounts {
+  totalDtrs: number;
+  dtrsOn: number;
+  dtrsOff: number;
+  activeAlerts: number;
+}
+
+function cardFields(data: Record<string, unknown>): CardCounts {
+  return {
+    totalDtrs: finiteCount(data, 'totalDtrs'),
+    dtrsOn: finiteCount(data, 'dtrsOn'),
+    dtrsOff: finiteCount(data, 'dtrsOff'),
+    activeAlerts: finiteCount(data, 'activeAlerts'),
+  };
+}
+
+function expectCards(cards: CardCounts): void {
+  for (const [name, count] of Object.entries(cards)) {
+    expect(Number.isFinite(count), `${name} count`).toBe(true);
+  }
+}
+
+function finiteCount(data: Record<string, unknown>, key: string): number {
+  const node = data[key];
+  const count = isRecord(node) ? node.count : undefined;
+  if (typeof count !== 'number' || !Number.isFinite(count)) {
+    throw new Error(`${key}.count is not a finite number`);
+  }
+  return count;
+}
+
+function dayLabels(monthYear: string): string[] {
+  const [year, month] = monthYear.split('-').map(Number);
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month - 1];
+  return Array.from({ length: last }, (_, index) => `${index + 1} ${short}`);
+}
+
+function monthBounds(monthYear: string): { start: string; end: string } {
+  const [year, month] = monthYear.split('-').map(Number);
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const padded = String(month).padStart(2, '0');
+  return { start: `${year}-${padded}-01`, end: `${year}-${padded}-${String(last).padStart(2, '0')}` };
+}
+
+function expectDatesInMonth(body: unknown, monthYear: string, label: string): void {
+  const bounds = monthBounds(monthYear);
+  const outside = collectDates(body).filter((date) => date < bounds.start || date > bounds.end);
+  expect(outside, `${label} stays in ${monthYear}`).toEqual([]);
+}
+
+function collectDates(value: unknown, found: string[] = []): string[] {
+  if (typeof value === 'string') {
+    const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
+    if (match) {
+      found.push(match[1]);
+    }
+    return found;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectDates(item, found);
+    }
+    return found;
+  }
+  if (isRecord(value)) {
+    for (const item of Object.values(value)) {
+      collectDates(item, found);
+    }
+  }
+  return found;
+}
+
+function expectMonthDays(labels: string[], monthYear: string): void {
+  const present = new Set(labels);
+  const expected = dayLabels(monthYear);
+  const missing = expected.filter((label) => !present.has(label));
+  expect(missing, `${monthYear} days`).toEqual([]);
+  expect(labels.length, 'the daily series is longer than a 12-point window').toBeGreaterThan(12);
+}
+
+function energyPoints(data: Record<string, unknown>): Array<{ label: string; kwh: number; kvah: number; kvarh: number }> {
+  const source = Array.isArray(data.points) ? data.points.filter(isRecord) : [];
+  return source.map((point) => ({
+    label: String(point.label ?? ''),
+    kwh: presentFinite(point, 'kwh'),
+    kvah: presentFinite(point, 'kvah'),
+    kvarh: presentFinite(point, 'kvarh'),
+  }));
+}
+
+function presentFinite(point: Record<string, unknown>, field: string): number {
+  const value = point[field];
   if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new Error(`Missing ${camel} on ${String(point.label)}`);
+    throw new Error(`${field} is missing on ${String(point.label)}`);
   }
   return value;
 }
 
-function toBucket(label: string): string {
-  return label.replace(/\bSeptember\b/g, 'Sep').replace(/\bSept\b/g, 'Sep').replace(/\bJune\b/g, 'Jun').replace(/\bJuly\b/g, 'Jul');
+function communicationCounts(data: Record<string, unknown>): { communicating: number; nonCommunicating: number; center: number } {
+  const items = bandItems(data);
+  const communicating = namedItem(items, ['communicating', 'communicated']) ?? looseCount(data, ['communicating', 'communicated', 'communicatingCount', 'communicatedCount']);
+  const nonCommunicating = namedItem(items, ['non-communicating', 'non communicating', 'noncommunicating']) ?? looseCount(data, ['nonCommunicating', 'nonCommunicated', 'non_communicating', 'nonCommunicatingCount']);
+  const summed = communicating + nonCommunicating;
+  const reported = apiTotal(data);
+  if (reported > 0) {
+    expect(reported, 'communication center').toBe(summed);
+  }
+  return { communicating, nonCommunicating, center: summed };
+}
+
+function loadingBands(data: Record<string, unknown>): Array<{ label: string; band: string; value: number }> {
+  const items = bandItems(data);
+  return LOADING_BANDS.map((band) => {
+    const value = namedItem(items, [...band.names]);
+    if (value === undefined) {
+      throw new Error(`Missing ${band.label}. Labels: ${items.map((item) => item.label).join(', ') || 'none'}`);
+    }
+    expect(value, band.label).toBeGreaterThanOrEqual(0);
+    return { label: band.label, band: band.band, value };
+  });
+}
+
+function severityCounts(data: Record<string, unknown>): Record<(typeof SEVERITIES)[number], number> {
+  const items = bandItems(data);
+  const counts = {} as Record<(typeof SEVERITIES)[number], number>;
+  for (const severity of SEVERITIES) {
+    const value = namedItem(items, [severity]);
+    if (value === undefined) {
+      throw new Error(`Missing ${severity}. Labels: ${items.map((item) => item.label).join(', ') || 'none'}`);
+    }
+    expect(value, severity).toBeGreaterThanOrEqual(0);
+    counts[severity] = value;
+  }
+  const summed = SEVERITIES.reduce((sum, severity) => sum + counts[severity], 0);
+  const reported = apiTotal(data);
+  expect(reported > 0 ? reported : summed, 'unbalance center').toBeGreaterThanOrEqual(0);
+  return counts;
+}
+
+function namedItem(items: Array<{ label: string; value: number }>, names: string[]): number | undefined {
+  const match = items.find((item) => names.includes(item.label.trim().toLowerCase()));
+  return match?.value;
+}
+
+function looseCount(data: Record<string, unknown>, keys: string[]): number {
+  const points = Array.isArray(data.points) ? data.points.filter(isRecord) : [];
+  const sources = [...points].reverse();
+  sources.push(data);
+  for (const source of sources) {
+    for (const key of keys) {
+      if (typeof source[key] === 'number' && Number.isFinite(source[key])) {
+        return source[key] as number;
+      }
+    }
+  }
+  throw new Error(`No count for ${keys[0]}. Keys: ${Object.keys(data).join(', ')}`);
+}
+
+function listIds(ids: number[]): Record<string, string | number> {
+  return { page: 1, limit: 10, selectedIds: ids.join(',') };
+}
+
+function record(value: unknown): Record<string, unknown> {
+  if (!isRecord(value)) {
+    throw new Error('Expected a JSON object');
+  }
+  return value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

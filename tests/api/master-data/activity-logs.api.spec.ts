@@ -4,6 +4,7 @@ import { ApiClient } from '../../../src/core/api/api.client';
 import { auditLogListSchema, rolesListSchema, validationErrorSchema } from '../../../src/core/api/dashboard.schemas';
 import { expectApiContract, expectAuthorizedContract, expectUnauthorized } from '../support/expect-dashboard-contract';
 import type { EnvironmentConfig } from '../../../src/core/config/config.loader';
+import { todayInAppZone } from '../../../src/core/utils/app-time';
 
 const ACTIONS: { label: string; code: string }[] = [
   { label: 'Consumer Created', code: 'consumer.created' },
@@ -378,8 +379,8 @@ test.describe('Activity logs API @master-data @regression', () => {
     }
   });
 
-  test('ALD-009 a write and the remaining rejected queries stay errors', async ({ api, env }) => {
-    const write = await api.post('masterDataAuditLogs', { data: {}, failOnStatus: false });
+  test('ALD-009 a write and the remaining rejected queries stay errors', async ({ api, env, data }) => {
+    const write = await api.post('masterDataAuditLogs', { data: data.payload('payloads/mocks.json', 'emptyWrite'), failOnStatus: false });
     expect(write.status, 'activity logs does not accept a write').toBeGreaterThanOrEqual(400);
     expect(write.durationMs, 'activity logs write response time').toBeLessThanOrEqual(env.timeouts.api);
     const cases: { label: string; query: Record<string, string | number> }[] = [
@@ -423,7 +424,7 @@ function todayQuery(today: string, extra?: Record<string, string | number>): Rec
 }
 
 function indiaToday(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  return todayInAppZone();
 }
 
 function shift(iso: string, days: number): string {

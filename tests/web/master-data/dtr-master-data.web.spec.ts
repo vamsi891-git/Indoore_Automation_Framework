@@ -224,9 +224,9 @@ test.describe('DTR Data @master-data @regression', () => {
     expect(await posted, 'an oversized file is not posted').toBe(false);
   });
 
-  test('DMD-009 a failed list does not paint a total from the error', async ({ page }) => {
+  test('DMD-009 a failed list does not paint a total from the error', async ({ page, data }) => {
     await page.route('**/dtr-master-data**', (route) =>
-      route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, data: { pagination: { total: 0, rows: [] } } }) }),
+      route.fulfill({ status: 500, contentType: 'application/json', body: data.json('payloads/mocks.json', 'pagedListFailed') }),
     );
     await page.reload();
     await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeDisabled();

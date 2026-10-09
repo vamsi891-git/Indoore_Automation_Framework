@@ -24,7 +24,7 @@ test.describe('Meter Data @master-data @regression', () => {
     await new MeterMasterDataPage(page, app).expectShell(list);
   });
 
-  test('MMD-001 Download is disabled while the list is loading', async ({ page }) => {
+  test('MMD-001 Download is disabled while the list is loading', async ({ page, data }) => {
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -38,10 +38,7 @@ test.describe('Meter Data @master-data @regression', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: { columns: [], rows: [], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } },
-        }),
+        body: data.json('payloads/mocks.json', 'meterListHolding'),
       });
     });
     await page.reload({ waitUntil: 'commit' });
@@ -122,7 +119,7 @@ test.describe('Meter Data @master-data @regression', () => {
     await meters.expectFooter(applied);
   });
 
-  test('MMD-003 lookups loading disable the panel, and a failed lookup adds no levels', async ({ page, app }) => {
+  test('MMD-003 lookups loading disable the panel, and a failed lookup adds no levels', async ({ page, app, data }) => {
     const meters = new MeterMasterDataPage(page, app);
     await page.route('**/utils/hierarchies/organisation**', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 1_500));
@@ -134,7 +131,7 @@ test.describe('Meter Data @master-data @regression', () => {
     await expect(page.getByRole('button', { name: 'Apply Filters', exact: true })).toBeDisabled();
 
     await page.route('**/utils/hierarchies/network**', (route) =>
-      route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false }) }),
+      route.fulfill({ status: 500, contentType: 'application/json', body: data.json('payloads/mocks.json', 'failed') }),
     );
     await meters.openFilters();
     await page.getByRole('button', { name: 'Hierarchy type', exact: true }).click();
@@ -332,9 +329,9 @@ test.describe('Meter Data @master-data @regression', () => {
     expect(body.data?.pagination?.total).toBe(before);
   });
 
-  test('MMD-009 a failed list does not paint a total from the error', async ({ page }) => {
+  test('MMD-009 a failed list does not paint a total from the error', async ({ page, data }) => {
     await page.route('**/meters-data**', (route) =>
-      route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, data: { pagination: { total: 0, rows: [] } } }) }),
+      route.fulfill({ status: 500, contentType: 'application/json', body: data.json('payloads/mocks.json', 'pagedListFailed') }),
     );
     await page.reload();
     await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeDisabled();

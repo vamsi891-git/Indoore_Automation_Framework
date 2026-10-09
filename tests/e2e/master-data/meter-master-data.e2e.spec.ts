@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
 import { meterListSchema } from '../../../src/core/api/dashboard.schemas';
 import { MeterMasterDataPage } from '../../../src/pages/meter-master-data.page';
+import type { ExportPayload } from '../../../src/core/data/dataset.types';
 
 const openQuery = { page: 1, limit: 10, isActive: true, mappingStatus: 'mapped' };
 
@@ -65,10 +66,12 @@ test.describe('Meter Data UI against the API @master-data @regression', () => {
     const apiFound = await api.getParsed('metersData', meterListSchema, { query: { ...openQuery, q: serial }, timeout: env.timeouts.api });
     expect(found.total).toBe(apiFound.data.pagination.total);
     const downloaded = await meters.downloadFiltered();
+    const expected = data.payload<ExportPayload>('payloads/exports.json', 'meterDownload');
+    expected.filters.q = serial;
     expect(downloaded.payload).toMatchObject({
-      resource: 'meter',
-      mode: 'filtered',
-      filters: { q: serial, isActive: 'true', mappingStatus: 'mapped' },
+      resource: expected.resource,
+      mode: expected.mode,
+      filters: expected.filters,
     });
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(downloaded.bytes as unknown as Parameters<ExcelJS.Xlsx['load']>[0]);

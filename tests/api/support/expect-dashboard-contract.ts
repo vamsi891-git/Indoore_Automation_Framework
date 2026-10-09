@@ -2,6 +2,7 @@ import { expect } from '@playwright/test';
 import type { ZodType } from 'zod';
 import type { ApiResult } from '../../../src/core/api/api.client';
 import { errorSchema } from '../../../src/core/api/dashboard.schemas';
+import { appTimeZone } from '../../../src/core/utils/app-time';
 import { expectApiHeaders } from './expect-api-headers';
 
 export function expectApiContract<T>(
@@ -87,7 +88,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function kolkataMonthQuery(): { monthYear: string; fromDate: string; toDate: string } {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
+    timeZone: appTimeZone(),
     year: 'numeric',
     month: '2-digit',
   }).formatToParts(new Date());

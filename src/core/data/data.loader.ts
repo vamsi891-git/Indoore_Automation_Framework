@@ -48,4 +48,16 @@ export class DataStore {
   charts(): ChartsFile {
     return this.read<ChartsFile>('dashboard/charts.json');
   }
+
+  payload<T>(relativePath: string, name: string): T {
+    const records = this.read<Record<string, unknown>>(relativePath);
+    if (!Object.prototype.hasOwnProperty.call(records, name)) {
+      throw new Error(`Unknown payload '${name}' in ${relativePath}. Available: ${Object.keys(records).join(', ')}`);
+    }
+    return structuredClone(records[name]) as T;
+  }
+
+  json(relativePath: string, name: string): string {
+    return JSON.stringify(this.payload(relativePath, name));
+  }
 }

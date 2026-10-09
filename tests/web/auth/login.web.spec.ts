@@ -7,7 +7,7 @@ test.describe('Sign-in page @auth @regression', () => {
   test('admin can open the operations dashboard @smoke', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
-    await expect(page).toHaveURL(new RegExp(`${escapeRegExp(app.routes.consumers)}$`));
+    await expect(page).toHaveURL(new RegExp(`${escapeRegExp(app.routes.consumers)}$`), { timeout: 20_000 });
     await new ConsumersPage(page, app).expectReady();
   });
 

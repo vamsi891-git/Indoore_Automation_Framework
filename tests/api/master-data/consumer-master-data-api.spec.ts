@@ -3,6 +3,7 @@ import { mkdtemp } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
+import type { ExportPayload } from '../../../src/core/data/dataset.types';
 import { ApiClient, type ApiResult } from '../../../src/core/api/api.client';
 import {
   loginSchema,
@@ -180,7 +181,7 @@ test.describe('Consumer master data API @master-data @regression', () => {
     await expectValidation(api, { page: 0 });
   });
 
-  test('session, permissions, ledger, and export follow the page contract', async ({ api }) => {
+  test('session, permissions, ledger, and export follow the page contract', async ({ api, data }) => {
     test.setTimeout(180_000);
     const me = await api.get('authMe', { expectedStatus: 200 });
     const session = expectAuthorizedContract(me, sessionMeSchema, responseLimitMs, 'auth me');
@@ -237,7 +238,7 @@ test.describe('Consumer master data API @master-data @regression', () => {
     expectApiContract(notes, validationErrorSchema, responseLimitMs, 'non-xlsx ledger file', { status: 400 });
 
     const exported = await api.post('consumerMasterExport', {
-      data: { resource: 'consumer', mode: 'filtered', filters: { q: '', meterType: 'test' } },
+      data: data.payload<ExportPayload>('payloads/exports.json', 'consumerFiltered'),
       failOnStatus: false,
       timeout: listTimeout,
     });

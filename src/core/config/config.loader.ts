@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import { ZodType } from 'zod';
+import { type output, type ZodTypeAny } from 'zod';
 import { resolvePlaceholders } from './placeholders';
 import {
   appSchema,
@@ -33,7 +33,7 @@ function readJson(filePath: string): unknown {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
 }
 
-function parseConfig<T>(schema: ZodType<T>, value: unknown, label: string): T {
+function parseConfig<S extends ZodTypeAny>(schema: S, value: unknown, label: string): output<S> {
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
     throw new Error(`Invalid ${label}:\n${parsed.error.toString()}`);

@@ -1,4 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
+import { appTimeZone } from '../utils/app-time';
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
 
@@ -12,7 +13,7 @@ export interface CalendarMonth {
 
 export function kolkataCalendar(date = new Date()): CalendarMonth {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
+    timeZone: appTimeZone(),
     year: 'numeric',
     month: '2-digit',
   }).formatToParts(date);
@@ -26,6 +27,23 @@ export function previousMonth(current: CalendarMonth): CalendarMonth {
     return calendarFrom(current.year - 1, 11);
   }
   return calendarFrom(current.year, current.monthIndex - 1);
+}
+
+export function monthDayLabels(monthYear: string): string[] {
+  const month = calendarMonth(monthYear);
+  const last = new Date(Date.UTC(month.year, month.monthIndex + 1, 0)).getUTCDate();
+  return Array.from({ length: last }, (_, index) => `${index + 1} ${month.short}`);
+}
+
+export function monthRangeText(monthYear: string): string {
+  const month = calendarMonth(monthYear);
+  const last = new Date(Date.UTC(month.year, month.monthIndex + 1, 0)).getUTCDate();
+  return `1 ${month.short}–${last} ${month.short} ${month.year}`;
+}
+
+export function calendarMonth(monthYear: string): CalendarMonth {
+  const [year, month] = monthYear.split('-').map(Number);
+  return calendarFrom(year, month - 1);
 }
 
 export function calendarFrom(year: number, monthIndex: number): CalendarMonth {
