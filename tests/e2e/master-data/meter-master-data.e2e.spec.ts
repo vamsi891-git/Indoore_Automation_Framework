@@ -6,11 +6,11 @@ import type { ExportPayload } from '../../../src/core/data/dataset.types';
 
 const openQuery = { page: 1, limit: 10, isActive: true, mappingStatus: 'mapped' };
 
-test.describe('Meter Data UI against the API @master-data @regression', () => {
+test.describe('Meter list on screen matches the server @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 240_000 });
 
-  test('the footer matches data.total for the open list and each filter @smoke', async ({ loginPage, api, data, page, app, env }) => {
+  test('The count at the bottom matches the server for the open list and for each filter @smoke', async ({ loginPage, api, data, page, app, env }) => {
     await api.authenticate(data.user('validAdmin'));
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
@@ -54,7 +54,7 @@ test.describe('Meter Data UI against the API @master-data @regression', () => {
     expect(offline.total).toBe(apiOffline.data.pagination.total);
   });
 
-  test('a filtered download has one workbook row per filtered meter', async ({ loginPage, api, data, page, app, env }) => {
+  test('A filtered download has one Excel row for each filtered meter', async ({ loginPage, api, data, page, app, env }) => {
     await api.authenticate(data.user('validAdmin'));
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));

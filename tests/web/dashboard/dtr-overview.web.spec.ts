@@ -27,19 +27,19 @@ async function openSelected(loginPage: LoginPage, data: DataStore, page: Page, a
   return { overview: opened.overview, snapshot, filter };
 }
 
-test.describe('DTR Overview @dashboard @regression', () => {
+test.describe('DTR overview @dashboard @regression', () => {
   test.use({ timezoneId: 'Asia/Kolkata' });
   functionality('Dashboard');
   test.describe.configure({ timeout: 180_000 });
 
-  test('DOW-001 DOW-002 DTR Management opens DTR Overview and the first paint follows the current month @smoke', async ({ loginPage, data, page, app }) => {
+  test('DTR Management opens DTR Overview for the current month @smoke', async ({ loginPage, data, page, app }) => {
     const { overview, snapshot } = await start(loginPage, data, page, app);
     await overview.expectShell();
     overview.expectInitialRequests(snapshot);
     overview.flushIssues();
   });
 
-  test('DOW-003 the selected month refreshes every widget read', async ({ loginPage, data, page, app }) => {
+  test('Choosing a month refreshes every chart and card', async ({ loginPage, data, page, app }) => {
     test.setTimeout(180_000);
     const { overview } = await start(loginPage, data, page, app);
     const filter = selectedFilter(data);
@@ -48,7 +48,7 @@ test.describe('DTR Overview @dashboard @regression', () => {
     overview.flushIssues();
   });
 
-  test('DOW-004 period menus are Daily and Weekly, and they are separate', async ({ loginPage, data, page, app }) => {
+  test('Power and energy can each be Daily or Weekly, and the choices stay separate', async ({ loginPage, data, page, app }) => {
     test.setTimeout(180_000);
     const { overview } = await start(loginPage, data, page, app);
     const filter = selectedFilter(data);
@@ -57,7 +57,7 @@ test.describe('DTR Overview @dashboard @regression', () => {
     overview.flushIssues();
   });
 
-  test('DOW-005 DOW-006 card counts, footers, and DTR list filters', async ({ loginPage, data, page, app }) => {
+  test('Each card count matches the DTR list it opens', async ({ loginPage, data, page, app }) => {
     test.setTimeout(300_000);
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
@@ -66,7 +66,7 @@ test.describe('DTR Overview @dashboard @regression', () => {
     overview.flushIssues();
   });
 
-  test('DOW-007 Power Status series and On and Off drill-downs', async ({ loginPage, data, page, app }) => {
+  test('Power Status shows each day, and On and Off open that day’s list', async ({ loginPage, data, page, app }) => {
     test.setTimeout(240_000);
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
@@ -75,7 +75,7 @@ test.describe('DTR Overview @dashboard @regression', () => {
     overview.flushIssues();
   });
 
-  test('DOW-008 Communication Status center and both drill-downs', async ({ loginPage, data, page, app }) => {
+  test('Communication Status shows the total, and each slice opens its list', async ({ loginPage, data, page, app }) => {
     test.setTimeout(240_000);
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
@@ -84,7 +84,7 @@ test.describe('DTR Overview @dashboard @regression', () => {
     overview.flushIssues();
   });
 
-  test('DOW-009 Percentage Loading bands and drill-downs', async ({ loginPage, data, page, app }) => {
+  test('Percentage Loading shows each band, and each band opens its list', async ({ loginPage, data, page, app }) => {
     test.setTimeout(300_000);
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
@@ -93,7 +93,7 @@ test.describe('DTR Overview @dashboard @regression', () => {
     overview.flushIssues();
   });
 
-  test('DOW-010 Energy Consumption series and drill-downs', async ({ loginPage, data, page, app }) => {
+  test('Energy Consumption shows each day, and a day opens its details', async ({ loginPage, data, page, app }) => {
     test.setTimeout(240_000);
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
@@ -102,7 +102,7 @@ test.describe('DTR Overview @dashboard @regression', () => {
     overview.flushIssues();
   });
 
-  test('DOW-011 Load Unbalance and Voltage Unbalance slices and drill-downs', async ({ loginPage, data, page, app }) => {
+  test('Load unbalance and voltage unbalance show each slice, and a slice opens its list', async ({ loginPage, data, page, app }) => {
     test.setTimeout(300_000);
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
@@ -113,14 +113,14 @@ test.describe('DTR Overview @dashboard @regression', () => {
     overview.flushIssues();
   });
 
-  test('DOW-006 widget downloads stay on DTR Overview', async ({ loginPage, data, page, app }) => {
+  test('Downloading a chart stays on DTR Overview', async ({ loginPage, data, page, app }) => {
     test.setTimeout(180_000);
     const { overview } = await openSelected(loginPage, data, page, app);
     await overview.expectDownloads();
     overview.flushIssues();
   });
 
-  test('DOW-012 a failed summary does not paint a count from the error body', async ({ loginPage, data, page, app }) => {
+  test('A failed summary does not show a count taken from the error', async ({ loginPage, data, page, app }) => {
     const overview = new DtrOverviewPage(page, app);
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
@@ -133,7 +133,7 @@ test.describe('DTR Overview @dashboard @regression', () => {
     await expect(page.getByRole('main')).not.toContainText('987654321');
   });
 
-  test('DOW-012 opening DTR Overview without a token returns to login', async ({ page }) => {
+  test('Opening DTR Overview without signing in returns to the sign-in page', async ({ page }) => {
     await page.goto('/dtr/dashboard');
     await expect(page).toHaveURL(/\/login/);
     await expect(page.getByText('DTR Overview', { exact: true })).toHaveCount(0);

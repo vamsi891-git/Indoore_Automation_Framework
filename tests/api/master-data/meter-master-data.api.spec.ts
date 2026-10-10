@@ -33,7 +33,7 @@ const exportHeaders = [
 ];
 const templateHeaders = [...METER_TEMPLATE_HEADERS];
 
-test.describe('Meter master data API @master-data @regression', () => {
+test.describe('Meter list on the server @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 180_000 });
 
@@ -42,7 +42,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     expectApiContract(login, loginSchema, env.timeouts.api, 'login', { authorized: false, hasBody: true });
   });
 
-  test('MMA-001 the open list, page 2, page 3, search, and connection @smoke', async ({ api, env }) => {
+  test('The open list, page 2, page 3, search, and connection all return the right meters @smoke', async ({ api, env }) => {
     const first = await readMeters(api, env.timeouts.api, openQuery);
     const total = first.data.pagination.total;
     const openParams = new URL(first.url).searchParams;
@@ -100,7 +100,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     );
   });
 
-  test('MMA-001 search covers a modem serial, a padded q, no match, and a search with a filter', async ({ api, env }) => {
+  test('Search finds a modem serial, ignores extra spaces, returns nothing for no match, and keeps a filter', async ({ api, env }) => {
     const first = await readMeters(api, env.timeouts.api, openQuery);
     const serial = String(first.data.rows[0]?.meterSerialNumber ?? '').trim();
     expect(serial, 'MMA-001 serial').not.toBe('');
@@ -140,7 +140,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect.soft(combined.data.pagination.total, 'MMA-001 filtered search total').toBeGreaterThan(0);
   });
 
-  test('MMA-001 online and offline are subsets and do not overlap', async ({ api, env }) => {
+  test('Online and offline meters are part of the full list and do not overlap', async ({ api, env }) => {
     const open = await readMeters(api, env.timeouts.api, openQuery);
     const total = open.data.pagination.total;
     const online = await readMeters(api, env.timeouts.api, { ...openQuery, communicationStatus: 'communicating' });
@@ -160,7 +160,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     }
   });
 
-  test('MMA-002 communication status covers the serials on the page', async ({ api, env }) => {
+  test('Communication status covers the meter serials on the page', async ({ api, env }) => {
     const page = await readMeters(api, env.timeouts.api, openQuery);
     const serials = page.data.rows.map((row) => String(row.meterSerialNumber ?? '').trim()).filter((serial) => serial.length > 0);
     expect(serials.length).toBeGreaterThan(0);
@@ -178,7 +178,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     }
   });
 
-  test('MMA-003 organisation and network hierarchy levels', async ({ api, env }) => {
+  test('Organisation and network levels return the meters under the chosen place', async ({ api, env }) => {
     const openTotal = (await readMeters(api, env.timeouts.api, openQuery)).data.pagination.total;
     for (const kind of ['organisation', 'network'] as const) {
       const result = await api.get('utilsHierarchies', { params: { kind }, expectedStatus: 200 });
@@ -206,7 +206,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     }
   });
 
-  test('MMA-004 combined connection and communication, and the last page remainder', async ({ api, env }) => {
+  test('Connection and communication can be used together, and the last page shows only the remaining meters', async ({ api, env }) => {
     const open = await readMeters(api, env.timeouts.api, openQuery);
     const dtr = await readMeters(api, env.timeouts.api, { ...openQuery, connection: 'dtr' });
     const online = await readMeters(api, env.timeouts.api, { ...openQuery, communicationStatus: 'communicating' });
@@ -230,7 +230,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(last.data.rows.length, 'last page row count').toBe(remainder === 0 ? 10 : remainder);
   });
 
-  test('MMA-005 limits 20 and 50, a page past the end, and a zero total', async ({ api, env }) => {
+  test('Page sizes 20 and 50 are honored, a page past the end is empty, and a zero total stays empty', async ({ api, env }) => {
     const open = await readMeters(api, env.timeouts.api, openQuery);
     const total = open.data.pagination.total;
     for (const limit of [20, 50]) {
@@ -250,7 +250,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(none.data.rows, 'total 0 rows').toHaveLength(0);
   });
 
-  test('MMA-005 mappingStatus unmapped, isActive false, and isActive all', async ({ api, env }) => {
+  test('Unmapped meters, inactive meters, and all meters can each be listed', async ({ api, env }) => {
     const unmapped = await readMeters(api, env.timeouts.api, { ...openQuery, mappingStatus: 'unmapped' });
     expect(new URL(unmapped.url).searchParams.get('mappingStatus')).toBe('unmapped');
 
@@ -266,7 +266,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(all.data.pagination.total, 'all is at least the active total').toBeGreaterThanOrEqual(0);
   });
 
-  test('MMA-004 a one-row filtered export is an xlsx', async ({ api, env, data }) => {
+  test('A download of one filtered meter is an Excel file', async ({ api, env, data }) => {
     const page = await readMeters(api, env.timeouts.api, openQuery);
     const serial = String(page.data.rows[0].meterSerialNumber ?? '').trim();
     expect(serial, 'serial').not.toBe('');
@@ -296,7 +296,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(rows.some((row) => row.some((cell) => cell.includes(serial))), 'exported serial').toBe(true);
   });
 
-  test('MMA-004 selected export and a filtered export of more than one row', async ({ api, env, data }) => {
+  test('A download of selected meters and a filtered download of more than one meter both succeed', async ({ api, env, data }) => {
     const page = await readMeters(api, env.timeouts.api, openQuery);
     const selectedId = meterExportId(page.data.rows[0]);
     expect(selectedId, 'selected id').toBeGreaterThan(0);
@@ -329,7 +329,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(narrow.total, 'more than one filtered row').toBeGreaterThan(1);
   });
 
-  test('MMA-005 the bulk template is the meter workbook', async ({ api, env }) => {
+  test('The bulk upload template is the meter Excel file', async ({ api, env }) => {
     const file = await api.get('meterBulkTemplate', { expectedStatus: 200, timeout: 60_000 });
     expect(file.durationMs).toBeLessThanOrEqual(env.timeouts.api);
     expect(file.contentType).toMatch(/spreadsheetml/i);
@@ -338,7 +338,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(headers, 'template headers').toEqual(templateHeaders);
   });
 
-  test('MMA-006 a csv import is rejected', async ({ api, env }) => {
+  test('A spreadsheet saved as CSV is rejected', async ({ api, env }) => {
     const before = (await readMeters(api, env.timeouts.api, openQuery)).data.pagination.total;
     const rejected = await api.post('meterBulkUpload', {
       multipart: {
@@ -354,7 +354,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     expect(after.data.pagination.total, 'csv does not change the list').toBe(before);
   });
 
-  test('MMA-006 an invalid workbook is rejected and the list total stays the same', async ({ api, env }) => {
+  test('An invalid Excel file is rejected and the meter total stays the same', async ({ api, env }) => {
     const before = (await readMeters(api, env.timeouts.api, openQuery)).data.pagination.total;
     const headers = [...METER_TEMPLATE_HEADERS];
     const files: Array<{ name: string; rows: string[][] }> = [
@@ -369,7 +369,7 @@ test.describe('Meter master data API @master-data @regression', () => {
     }
   });
 
-  test('the signed-in shell calls return 200', async ({ api, env }) => {
+  test('The screens a signed-in person opens all succeed', async ({ api, env }) => {
     const me = expectAuthorizedContract(await api.get('authMe', { expectedStatus: 200 }), sessionMeSchema, env.timeouts.api, 'auth me');
     const keys = expectAuthorizedContract(
       await api.get('myPermissions', { expectedStatus: 200 }),
@@ -400,10 +400,10 @@ test.describe('Meter master data API @master-data @regression', () => {
   });
 });
 
-test.describe('Meter master data API security @master-data @regression', () => {
+test.describe('Meter list sign-in checks @master-data @regression', () => {
   functionality('Master Data');
 
-  test('meter reads and shell reads reject a missing token and a bad bearer', async ({ request, app, env }) => {
+  test('Meter reads are refused when nobody is signed in or the sign-in is not valid', async ({ request, app, env }) => {
     const anonymous = new ApiClient(request, app, env);
     const reads = ['metersData', 'meterCommunicationStatus', 'meterBulkTemplate', 'notificationStats', 'auth2faDevices', 'authMe', 'myPermissions'];
     for (const endpoint of reads) {
@@ -417,7 +417,7 @@ test.describe('Meter master data API security @master-data @regression', () => {
     }
   });
 
-  test('meter export and meter upload reject a missing token and a bad bearer', async ({ app, env, data }) => {
+  test('Meter download and meter upload are refused when nobody is signed in or the sign-in is not valid', async ({ app, env, data }) => {
     const context = await playwrightRequest.newContext();
     const anonymous = new ApiClient(context, app, env);
     try {
@@ -458,7 +458,7 @@ test.describe('Meter master data API security @master-data @regression', () => {
     }
   });
 
-  test('export without a CSRF cookie returns 403 CSRF_MISSING', async ({ app, env, data }) => {
+  test('A meter download without the security cookie is refused', async ({ app, env, data }) => {
     const context = await playwrightRequest.newContext();
     try {
       const anonymous = new ApiClient(context, app, env);

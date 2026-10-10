@@ -2,12 +2,12 @@ import { expect, functionality, requireFeature, test } from '../../../src/core/f
 import { dtrListSchema } from '../../../src/core/api/dashboard.schemas';
 import { DashboardPage } from '../../../src/pages/dashboard.page';
 
-test.describe('Indore DTR dashboard @dashboard @assets @regression', () => {
+test.describe('DTR table on the dashboard @dashboard @assets @regression', () => {
   functionality('Dashboard');
 
-  test('table shows the DTR API records', async ({ loginPage, data, page, api, app }) => {
+  test('The table shows the same DTRs the server returned', async ({ loginPage, data, page, api, app }) => {
     console.log('ISSUE: this test calls GET /asset-management/dtrs and expects a Dashboard Overview table. That route returns 404. The live screen is DTR Overview at /dtr/dashboard.');
-    test.skip(true, 'The asset-management DTR table is not in the live app. DTR Overview covers /dtr/dashboard.');
+    test.skip(true, 'The live app does not have this DTR table. DTR Overview covers that screen.');
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     const dashboardPage = new DashboardPage(page, app);
@@ -28,9 +28,9 @@ test.describe('Indore DTR dashboard @dashboard @assets @regression', () => {
     }
   });
 
-  test('DTR navigation scrolls the table into view', async ({ loginPage, data, page, app }) => {
+  test('Opening DTRs scrolls the table into view', async ({ loginPage, data, page, app }) => {
     console.log('ISSUE: this test looks for the text "Dashboard Overview". The live app does not have that screen.');
-    test.skip(true, 'The live app has no Dashboard Overview screen.');
+    test.skip(true, 'The live app does not have a Dashboard Overview screen.');
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     const dashboardPage = new DashboardPage(page, app);

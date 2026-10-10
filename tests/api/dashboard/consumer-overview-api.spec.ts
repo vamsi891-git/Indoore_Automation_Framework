@@ -17,7 +17,7 @@ import {
 
 const month = kolkataMonthQuery();
 
-test.describe('Consumer overview API @dashboard @regression', () => {
+test.describe('Consumer overview numbers from the server @dashboard @regression', () => {
   functionality('Dashboard');
 
   test.beforeEach(async ({ api, data, env }) => {
@@ -25,7 +25,7 @@ test.describe('Consumer overview API @dashboard @regression', () => {
     expectApiContract(login, loginSchema, env.timeouts.api, 'login', { authorized: false, hasBody: true });
   });
 
-  test('metrics status, time, schema, content type, total, and business rules @smoke', async ({ api, env }) => {
+  test('The consumer summary arrives on time, in the expected shape, and the totals follow the rules @smoke', async ({ api, env }) => {
     const result = await api.get('consumerMetrics', { query: { view: 'consumer' }, expectedStatus: 200 });
     const body = expectAuthorizedContract(result, consumerMetricsSchema, env.timeouts.api, 'consumer metrics');
     const dataNode = body.data;
@@ -38,7 +38,7 @@ test.describe('Consumer overview API @dashboard @regression', () => {
     expect(sumCounts(dataNode.categoryWiseConsumer), 'category sum').toBe(types.totalConsumers.count);
   });
 
-  test('meter status status, time, schema, content type, total, and communicating identity', async ({ api, env }) => {
+  test('Meter status arrives on time, in the expected shape, and communicating meters are identified', async ({ api, env }) => {
     const result = await api.get('consumerMeterStatus', { query: month, expectedStatus: 200 });
     const body = expectAuthorizedContract(result, meterStatusSchema, env.timeouts.api, 'meter status');
     const dataNode = body.data;
@@ -50,7 +50,7 @@ test.describe('Consumer overview API @dashboard @regression', () => {
     expect(numberField(dataNode, 'nonCommunicatedPercentage')).toBeGreaterThanOrEqual(0);
   });
 
-  test('consumer list total matches the Consumers card', async ({ api, env }) => {
+  test('The consumer list total matches the Consumers card', async ({ api, env }) => {
     const metrics = consumerMetricsSchema.parse(
       (await api.get('consumerMetrics', { query: { view: 'consumer' }, expectedStatus: 200 })).body,
     );
@@ -59,7 +59,7 @@ test.describe('Consumer overview API @dashboard @regression', () => {
     expect(totalCount(body.data, 'consumer list')).toBe(metrics.data.consumerType.totalConsumers.count);
   });
 
-  test('category distribution total matches the Residential row', async ({ api, env }) => {
+  test('The category total matches the Residential row', async ({ api, env }) => {
     const metrics = consumerMetricsSchema.parse(
       (await api.get('consumerMetrics', { query: { view: 'consumer' }, expectedStatus: 200 })).body,
     );
@@ -73,7 +73,7 @@ test.describe('Consumer overview API @dashboard @regression', () => {
     expect(totalCount(body.data, 'Residential')).toBe(residential?.count);
   });
 
-  test('connection, phase, category, and OEM drill-downs match the metrics slices', async ({ api, env }) => {
+  test('Connection, phase, category, and manufacturer lists match the chart pieces', async ({ api, env }) => {
     test.setTimeout(300_000);
     const metrics = consumerMetricsSchema.parse(
       (await api.get('consumerMetrics', { query: { view: 'consumer' }, expectedStatus: 200 })).body,
@@ -96,7 +96,7 @@ test.describe('Consumer overview API @dashboard @regression', () => {
     }
   });
 
-  test('rejects a bogus view, a one-sided date, and a drill-down without its filter', async ({ api, env }) => {
+  test('An unknown view, a date with only one end, and a list opened without its filter are rejected', async ({ api, env }) => {
     await expectValidation(api, env.timeouts.api, 'consumerMetrics', { view: 'bogus' });
     await expectValidation(api, env.timeouts.api, 'consumerMeterStatus', { fromDate: '2026-01-01' });
     await expectValidation(api, env.timeouts.api, 'consumerConnectionStatus', { status: 'bogus' });
@@ -106,10 +106,10 @@ test.describe('Consumer overview API @dashboard @regression', () => {
   });
 });
 
-test.describe('Consumer overview API security @dashboard @regression', () => {
+test.describe('Consumer overview sign-in checks @dashboard @regression', () => {
   functionality('Dashboard');
 
-  test('every consumer overview read rejects a missing token and a bad bearer', async ({ request, app, env }) => {
+  test('Every consumer overview read is refused when nobody is signed in or the sign-in is not valid', async ({ request, app, env }) => {
     const anonymous = new ApiClient(request, app, env);
     const reads: Array<{ endpoint: string; query?: Record<string, string> }> = [
       { endpoint: 'consumerMetrics', query: { view: 'consumer' } },

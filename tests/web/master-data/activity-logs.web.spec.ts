@@ -22,7 +22,7 @@ const ACTIONS: { label: string; code: string }[] = [
   { label: 'Upload Rejected', code: 'master_data.upload.rejected' },
 ];
 
-test.describe('Activity Logs @master-data @regression', () => {
+test.describe('Activity history @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 180_000 });
 
@@ -35,7 +35,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     list = await new ActivityLogsPage(page, app).open();
   });
 
-  test('ALD-001 Activity Logs opens on today @smoke', async ({ page, app }) => {
+  test('Activity history opens on today’s entries @smoke', async ({ page, app }) => {
     const today = indiaToday();
     const logs = new ActivityLogsPage(page, app);
     await logs.expectShell(list, longDate(today));
@@ -53,7 +53,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     }
   });
 
-  test('ALD-001 controls stay disabled while the first list is loading', async ({ page }) => {
+  test('Search and filters stay unavailable while the first list is loading', async ({ page }) => {
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -79,7 +79,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     }
   });
 
-  test('ALD-002 search trims, misses, and clears', async ({ page, app }) => {
+  test('Search ignores extra spaces, shows nothing when there is no match, and can be cleared', async ({ page, app }) => {
     const logs = new ActivityLogsPage(page, app);
     const source = list.total > 0 ? list : await logs.clearRange();
     const needle = String(source.logs.find((row) => String(row.action ?? '').trim())?.action ?? '').trim();
@@ -116,7 +116,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     await expect.poll(() => requests.filter((url) => new URL(url).searchParams.has('search')).length, { timeout: 1_000 }).toBe(0);
   });
 
-  test('ALD-003 the role menu uses permission role names', async ({ page, app }) => {
+  test('The role filter uses the role names people are given', async ({ page, app }) => {
     const logs = new ActivityLogsPage(page, app);
     await page.getByRole('button', { name: 'Filter master data activity log by actor role', exact: true }).click();
     const menu = page.getByRole('menu').last();
@@ -139,7 +139,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     }
   });
 
-  test('ALD-004 the action menu uses the known labels', async ({ page, app }) => {
+  test('The action filter uses the known action names', async ({ page, app }) => {
     const logs = new ActivityLogsPage(page, app);
     await page.getByRole('button', { name: 'Filter master data activity log by action', exact: true }).click();
     const labels = (await page.getByRole('menu').last().getByRole('menuitem').allInnerTexts()).map((label) => label.trim());
@@ -164,7 +164,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     expect(new URL(all.url).searchParams.has('action')).toBe(false);
   });
 
-  test('ALD-005 the date range is inclusive, ordered, and cannot enter the future', async ({ page, app }) => {
+  test('The date range includes both ends, stays in order, and cannot include a future day', async ({ page, app }) => {
     const logs = new ActivityLogsPage(page, app);
     const today = indiaToday();
     const earlier = shift(today, -3);
@@ -194,7 +194,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     }
   });
 
-  test('ALD-006 a visible row names the action and keeps details readable', async ({ page, app }) => {
+  test('A visible row names the action and keeps the details readable', async ({ page, app }) => {
     const logs = new ActivityLogsPage(page, app);
     const source = list.total > 0 ? list : await logs.clearRange();
     expect(source.logs.length > 0 || source.total === 0).toBe(true);
@@ -215,7 +215,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     await expect(page.getByRole('columnheader', { name: 'Time', exact: true })).toBeVisible();
   });
 
-  test('ALD-007 page size and the next page follow the footer', async ({ page, app }) => {
+  test('The page size and the next page match the count at the bottom', async ({ page, app }) => {
     const logs = new ActivityLogsPage(page, app);
     const wide = list.total > 50 ? list : await logs.clearRange();
     await page.keyboard.press('Escape');
@@ -262,7 +262,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     await expect(page.getByRole('columnheader', { name: 'Time' })).toBeVisible();
   });
 
-  test('ALD-101 refresh drops the filters the address bar cannot store', async ({ page, app }) => {
+  test('Refreshing the page clears filters that are not kept in the address', async ({ page, app }) => {
     const logs = new ActivityLogsPage(page, app);
     await page.getByRole('button', { name: 'Filter master data activity log by action', exact: true }).click();
     const labels = (await page.getByRole('menu').last().getByRole('menuitem').allInnerTexts()).map((label) => label.trim());
@@ -297,7 +297,7 @@ test.describe('Activity Logs @master-data @regression', () => {
     expect(params.get('from')).toContain(indiaToday());
   });
 
-  test('ALD-110 a column header does not sort', async ({ page }) => {
+  test('Clicking a column heading does not sort the list', async ({ page }) => {
     const requests: string[] = [];
     page.on('request', (request) => {
       if (request.url().includes('/master-data/audit-logs')) requests.push(request.url());
@@ -309,12 +309,16 @@ test.describe('Activity Logs @master-data @regression', () => {
   });
 });
 
-test.describe('Activity Logs access and edges @master-data @regression', () => {
+test.describe('Who can open activity history, and what happens when it fails @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 180_000 });
 
-  for (const keep of ['consumers.view', 'dtrs.view', 'meters.view']) {
-    test(`ALD-008 ${keep} can open the page`, async ({ loginPage, data, page, app }) => {
+  for (const [keep, who] of [
+    ['consumers.view', 'view consumers'],
+    ['dtrs.view', 'view DTRs'],
+    ['meters.view', 'view meters'],
+  ] as const) {
+    test(`A person allowed only to ${who} can open activity history`, async ({ loginPage, data, page, app }) => {
       await page.route(AUTH_ROUTE, (route) => rewriteAuth(route, (key) => key === keep, page.request));
       await loginPage.open();
       await loginPage.signIn(data.user('validAdmin'));
@@ -327,7 +331,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     });
   }
 
-  test('ALD-008 none of the three view permissions is denied', async ({ loginPage, data, page, app }) => {
+  test('A person who cannot view consumers, DTRs, or meters is blocked from activity history', async ({ loginPage, data, page, app }) => {
     await page.route(AUTH_ROUTE, (route) =>
       rewriteAuth(route, (key) => !['consumers.view', 'dtrs.view', 'meters.view'].includes(key), page.request),
     );
@@ -348,7 +352,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     await expect(page.getByRole('textbox', { name: 'Search master data activity logs' })).toBeDisabled();
   });
 
-  test('ALD-008 a failed permission request is shown', async ({ loginPage, data, page, app }) => {
+  test('A failed permission check shows a message instead of the activity history', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });
@@ -357,12 +361,12 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     await expect(page.getByText('Unable to load your permissions. Try refreshing the page.')).toBeVisible();
   });
 
-  test('ALD-008 a signed-out visit returns to login', async ({ page, app }) => {
+  test('Opening activity history without signing in returns to the sign-in page', async ({ page, app }) => {
     await page.goto(app.routes.activityLogs);
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('ALD-008 a failed list shows the server message', async ({ loginPage, data, page, app }) => {
+  test('A failed activity list shows the message from the server', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });
@@ -389,7 +393,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     await expect(page.getByText('No activity log entries match your filters.')).toHaveCount(0);
   });
 
-  test('ALD-008 invalid JSON and an unexpected body are named', async ({ loginPage, data, page, app }) => {
+  test('A broken or unexpected activity reply is named on the page', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });
@@ -407,7 +411,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     await expect(page.getByText('Unexpected API response')).toBeVisible();
   });
 
-  test('ALD-003 a failed role list leaves the log usable', async ({ loginPage, data, page, app }) => {
+  test('A failed role list still leaves the activity history usable', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });
@@ -419,7 +423,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     expect(labels).toEqual(['All Roles']);
   });
 
-  test('ALD-095 and ALD-096 unknown actions are dropped and an empty list falls back', async ({ loginPage, data, page, app }) => {
+  test('Unknown actions are left out, and an empty action list falls back to the known names', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });
@@ -453,7 +457,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     expect(fallback.slice(1)).toEqual(ACTIONS.map((action) => action.label));
   });
 
-  test('ALD-103 a single row still shows the footer and page sizes', async ({ loginPage, data, page, app }) => {
+  test('A single row still shows the count at the bottom and the page sizes', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });
@@ -472,7 +476,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     await expect(page.getByRole('navigation', { name: 'Master data activity log pages' })).toHaveCount(0);
   });
 
-  test('ALD-105 duplicate ids and a row without an id both stay visible', async ({ loginPage, data, page, app }) => {
+  test('A repeated entry and an entry without an id both stay visible', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });
@@ -501,7 +505,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     console.log('ISSUE ALD-002: a Details object renders as an em dash, so the change text was dropped');
   });
 
-  test('ALD-109 a UTC instant is shown in India time', async ({ loginPage, data, page, app }) => {
+  test('A time stored in universal time is shown in India time', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });
@@ -520,7 +524,7 @@ test.describe('Activity Logs access and edges @master-data @regression', () => {
     await expect(row).not.toContainText('7th Oct 2026, 06:30 PM');
   });
 
-  test('a blank column key is dropped and a blank header uses the key', async ({ loginPage, data, page, app }) => {
+  test('A column with no name is dropped, and a blank heading uses the column name', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });

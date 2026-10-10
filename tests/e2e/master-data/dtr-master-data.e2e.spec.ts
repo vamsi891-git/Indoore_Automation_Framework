@@ -9,11 +9,11 @@ import type { ExportPayload } from '../../../src/core/data/dataset.types';
 
 const openQuery = { page: '1', limit: '10' };
 
-test.describe('DTR Data UI against the API @master-data @regression', () => {
+test.describe('DTR list on screen matches the server @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 240_000 });
 
-  test('the footer matches pagination.total for the open list and each communication filter @smoke', async ({
+  test('The count at the bottom matches the server for the open list and for each communication filter @smoke', async ({
     loginPage,
     api,
     data,
@@ -43,7 +43,7 @@ test.describe('DTR Data UI against the API @master-data @regression', () => {
     await dtrs.expectFooter(offline);
   });
 
-  test('a filtered download has one workbook row per filtered DTR', async ({ loginPage, api, data, page, app, env }) => {
+  test('A filtered download has one Excel row for each filtered DTR', async ({ loginPage, api, data, page, app, env }) => {
     await api.authenticate(data.user('validAdmin'));
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));

@@ -30,7 +30,7 @@ const LOADING_BANDS = [
 ] as const;
 const SEVERITIES = ['severe', 'moderate', 'balanced'] as const;
 
-test.describe('DTR overview API @dashboard @regression', () => {
+test.describe('DTR overview numbers from the server @dashboard @regression', () => {
   functionality('Dashboard');
   test.describe.configure({ timeout: 180_000 });
 
@@ -39,7 +39,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     expectApiContract(login, loginSchema, env.timeouts.api, 'login', { authorized: false, hasBody: true });
   });
 
-  test('DOA-001 summary for the selected month, the current month, and weekly', async ({ api, data, env }) => {
+  test('The summary works for the chosen month, the current month, and a weekly view', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const selected = await readSummary(api, env.timeouts.api, dailyQuery(filter));
     expectCards(selected);
@@ -53,7 +53,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     expectCards(weekly);
   });
 
-  test('DOA-002 power status covers every day of the selected month', async ({ api, data, env }) => {
+  test('Power status covers every day of the chosen month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const daily = await readPoints(api, env.timeouts.api, 'dtrPowerStatus', dailyQuery(filter), `${filter.monthYear} power`);
     const points = pointList(record(daily));
@@ -68,7 +68,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     expect(pointList(record(weekly)).length, 'weekly power points').toBeGreaterThanOrEqual(0);
   });
 
-  test('DOA-003 energy consumption covers every day of the selected month', async ({ api, data, env }) => {
+  test('Energy consumption covers every day of the chosen month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const daily = await readPoints(api, env.timeouts.api, 'dtrConsumption', dailyQuery(filter), `${filter.monthYear} consumption`);
     const points = energyPoints(record(daily));
@@ -80,7 +80,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     expect(Array.isArray(record(weekly).points), 'weekly consumption points').toBe(true);
   });
 
-  test('DOA-004 communication status for the selected month and the first-paint query', async ({ api, data, env }) => {
+  test('Communication status works for the chosen month and for the first view of the current month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const selected = await readBreakdown(api, env.timeouts.api, 'dtrCommunicationStatus', { monthYear: filter.monthYear }, `${filter.monthYear} communication`);
     const counts = communicationCounts(record(selected));
@@ -89,7 +89,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     communicationCounts(record(firstPaint));
   });
 
-  test('DOA-005 percentage loading for the selected month and the first-paint query', async ({ api, data, env }) => {
+  test('Percentage loading works for the chosen month and for the first view of the current month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const selected = await readBreakdown(api, env.timeouts.api, 'dtrPercentageLoading', { monthYear: filter.monthYear }, `${filter.monthYear} loading`);
     const bands = loadingBands(record(selected));
@@ -98,7 +98,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     loadingBands(record(firstPaint));
   });
 
-  test('DOA-006 load unbalance for the selected month and the first-paint query', async ({ api, data, env }) => {
+  test('Load unbalance works for the chosen month and for the first view of the current month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const selected = await readBreakdown(api, env.timeouts.api, 'dtrLoadUnbalance', { monthYear: filter.monthYear }, `${filter.monthYear} load`);
     severityCounts(record(selected));
@@ -106,7 +106,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     severityCounts(record(firstPaint));
   });
 
-  test('DOA-007 voltage unbalance for the selected month and the first-paint query', async ({ api, data, env }) => {
+  test('Voltage unbalance works for the chosen month and for the first view of the current month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const selected = await readBreakdown(api, env.timeouts.api, 'dtrVoltageUnbalance', { monthYear: filter.monthYear }, `${filter.monthYear} voltage`);
     severityCounts(record(selected));
@@ -114,7 +114,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     severityCounts(record(firstPaint));
   });
 
-  test('DOA-008 each card list uses the selected month summary', async ({ api, data, env }) => {
+  test('Each card’s list uses the summary for the chosen month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const summary = dtrSummarySchema.parse((await api.get('dtrSummary', { query: dailyQuery(filter), expectedStatus: 200 })).body);
     const body = record(summary.data);
@@ -125,7 +125,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     await readList(api, env.timeouts.api, listIds(positiveIds(lookupIds(body, 'activeAlerts'))), 'active alerts list');
   });
 
-  test('DOA-009 power details match the clicked day and a weekly point', async ({ api, data, env }) => {
+  test('Power details match the chosen day and a weekly point', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const daily = pointList(record(await readPoints(api, env.timeouts.api, 'dtrPowerStatus', dailyQuery(filter), 'power for details')));
     const point = daily.find((item) => item.dtrsOn > 0 || item.dtrsOff > 0) ?? daily[0];
@@ -136,14 +136,14 @@ test.describe('DTR overview API @dashboard @regression', () => {
     await expectPowerDetails(api, env.timeouts.api, weekly[0], filter, 'weekly');
   });
 
-  test('DOA-010 communication details stay inside the selected month', async ({ api, data, env }) => {
+  test('Communication details stay inside the chosen month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     communicationCounts(record(await readBreakdown(api, env.timeouts.api, 'dtrCommunicationStatus', { monthYear: filter.monthYear }, 'communication chart')));
     await readDetails(api, env.timeouts.api, 'dtrCommunicationDetails', { status: 'communicated', monthYear: filter.monthYear }, 'communicating details', filter.monthYear);
     await readDetails(api, env.timeouts.api, 'dtrCommunicationDetails', { status: 'non-communicated', monthYear: filter.monthYear }, 'non-communicating details', filter.monthYear);
   });
 
-  test('DOA-011 percentage loading details stay inside the selected month', async ({ api, data, env }) => {
+  test('Percentage loading details stay inside the chosen month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const bands = loadingBands(record(await readBreakdown(api, env.timeouts.api, 'dtrPercentageLoading', { monthYear: filter.monthYear }, 'loading chart')));
     for (const band of bands) {
@@ -151,7 +151,7 @@ test.describe('DTR overview API @dashboard @regression', () => {
     }
   });
 
-  test('DOA-012 consumption details return a count for each energy kind', async ({ api, data, env }) => {
+  test('Consumption details return a count for each kind of energy', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     const points = energyPoints(record(await readPoints(api, env.timeouts.api, 'dtrConsumption', dailyQuery(filter), 'consumption for details')));
     const point = points.find((item) => item.kwh !== 0 || item.kvah !== 0 || item.kvarh !== 0) ?? points[0];
@@ -169,17 +169,17 @@ test.describe('DTR overview API @dashboard @regression', () => {
     }
   });
 
-  test('DOA-013 load unbalance details stay inside the selected month', async ({ api, data, env }) => {
+  test('Load unbalance details stay inside the chosen month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     await expectSeverityDetails(api, env.timeouts.api, 'dtrLoadUnbalance', 'dtrLoadUnbalanceDetails', 'load', filter.monthYear);
   });
 
-  test('DOA-014 voltage unbalance details stay inside the selected month', async ({ api, data, env }) => {
+  test('Voltage unbalance details stay inside the chosen month', async ({ api, data, env }) => {
     const filter = selectedFilter(data);
     await expectSeverityDetails(api, env.timeouts.api, 'dtrVoltageUnbalance', 'dtrVoltageUnbalanceDetails', 'voltage', filter.monthYear);
   });
 
-  test('DOA-001 DOA-009 DOA-010 DOA-011 DOA-012 DOA-013 DOA-014 rejected queries return 400', async ({ api, env }) => {
+  test('A bad month, period, status, band, or energy kind is rejected', async ({ api, env }) => {
     const checks: Array<{ endpoint: string; query: Record<string, string> }> = [
       { endpoint: 'dtrSummary', query: { period: 'bogus' } },
       { endpoint: 'dtrSummary', query: { monthYear: '2026-13' } },
@@ -197,11 +197,11 @@ test.describe('DTR overview API @dashboard @regression', () => {
   });
 });
 
-test.describe('DTR overview API security @dashboard @regression', () => {
+test.describe('DTR overview sign-in checks @dashboard @regression', () => {
   functionality('Dashboard');
   test.describe.configure({ timeout: 180_000 });
 
-  test('DOA-015 every DTR overview read rejects a missing token and a bad bearer', async ({ request, app, env }) => {
+  test('Every DTR overview read is refused when nobody is signed in or the sign-in is not valid', async ({ request, app, env }) => {
     const anonymous = new ApiClient(request, app, env);
     const reads = [
       'dtrSummary',

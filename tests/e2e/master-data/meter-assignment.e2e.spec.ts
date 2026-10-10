@@ -8,11 +8,11 @@ import { MeterAssignmentPage } from '../../../src/pages/meter-assignment.page';
 import { MeterMasterDataPage } from '../../../src/pages/meter-master-data.page';
 import { METER_TEMPLATE_HEADERS, meterCells, writeMeterSheet } from '../../support/meter-workbook';
 
-test.describe('Meter assignment @master-data @regression', () => {
+test.describe('Assigning a meter @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 600_000 });
 
-  test('a bulk-uploaded meter can be assigned to a consumer and then cannot be assigned to a DTR', async ({
+  test('A meter added by bulk upload can be assigned to a consumer, and then cannot be assigned to a DTR', async ({
     loginPage,
     api,
     data,
@@ -37,7 +37,7 @@ test.describe('Meter assignment @master-data @regression', () => {
     await assignment.expectDtrRejectsConsumerMeter(identity.serial);
   });
 
-  test('a bulk-uploaded meter assigned to a DTR cannot be assigned to a consumer', async ({
+  test('A meter added by bulk upload and assigned to a DTR cannot be assigned to a consumer', async ({
     loginPage,
     api,
     data,

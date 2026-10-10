@@ -2,11 +2,11 @@ import { expect, functionality, test } from '../../../src/core/fixtures/test.fix
 import { auditLogListSchema } from '../../../src/core/api/dashboard.schemas';
 import { ActivityLogsPage } from '../../../src/pages/activity-logs.page';
 
-test.describe('Activity logs UI versus API @master-data @regression', () => {
+test.describe('Activity history on screen matches the server @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 180_000 });
 
-  test('the footer total matches the list the page requested', async ({ loginPage, api, data, page, app, env }) => {
+  test('The count at the bottom matches the activity list the page asked for', async ({ loginPage, api, data, page, app, env }) => {
     await api.authenticate(data.user('validAdmin'));
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));

@@ -1,9 +1,9 @@
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
 import { DashboardPage } from '../../../src/pages/dashboard.page';
 const assetCards = ['substationsCard', 'feedersCard', 'dtrsCard', 'consumersCard'] as const;
-test.describe('Dashboard overview @dashboard @regression', () => {
+test.describe('Dashboard @dashboard @regression', () => {
   functionality('Dashboard');
-  test('admin can open the dashboard from consumers @smoke', async ({ loginPage, data, page, app }) => {
+  test('An administrator can open the dashboard from the consumer area @smoke', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await expect(page).toHaveURL(new RegExp(`${escapeRegExp(app.routes.consumers)}$`));

@@ -25,7 +25,7 @@ import { expectApiContract, expectAuthorizedContract, expectUnauthorized, totalC
 const listTimeout = 60_000;
 let responseLimitMs = 30_000;
 
-test.describe('Consumer master data API @master-data @regression', () => {
+test.describe('Consumer list on the server @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 120_000 });
 
@@ -35,7 +35,7 @@ test.describe('Consumer master data API @master-data @regression', () => {
     expectApiContract(login, loginSchema, responseLimitMs, 'login', { authorized: false, hasBody: true });
   });
 
-  test('the first page returns rows for meterType=all @smoke', async ({ api }) => {
+  test('The first page returns consumers for every meter type @smoke', async ({ api }) => {
     const result = await list(api, { meterType: 'all', limit: 10, page: 1, includeArchiveCounts: false });
     const body = expectAuthorizedContract(result, masterListSchema, responseLimitMs, 'consumer list');
     const total = totalCount(body.data, 'consumer list');
@@ -45,7 +45,7 @@ test.describe('Consumer master data API @master-data @regression', () => {
     expect(serialOf(rows[0]), 'meter serial on the first row').not.toBe('');
   });
 
-  test('search by a meter serial from the list', async ({ api }) => {
+  test('Searching by a meter serial from the list finds that consumer', async ({ api }) => {
     const first = await readList(api, { meterType: 'all', limit: 10, page: 1, includeArchiveCounts: false });
     const serial = serialOf(first.rows[0]);
     const found = await readList(api, { meterType: 'all', limit: 10, page: 1, q: serial, includeArchiveCounts: false });
@@ -56,7 +56,7 @@ test.describe('Consumer master data API @master-data @regression', () => {
     ).toBe(true);
   });
 
-  test('page 2 with limit 20 does not repeat page 1', async ({ api }) => {
+  test('Page 2, with 20 consumers per page, does not repeat page 1', async ({ api }) => {
     const page1 = await readList(api, { meterType: 'all', limit: 20, page: 1, includeArchiveCounts: false });
     expect(page1.total, 'consumer list').toBeGreaterThan(20);
     expect(page1.rows.length, 'page 1').toBe(20);
@@ -66,7 +66,7 @@ test.describe('Consumer master data API @master-data @regression', () => {
     expect(rowId(page2.rows[0]), 'page 2 first row').not.toBe(rowId(page1.rows[0]));
   });
 
-  test('live plus test, categories, manufacturers, and connection status each equal the total', async ({ api }) => {
+  test('Live plus test, categories, manufacturers, and connection status each add up to the consumer total', async ({ api }) => {
     test.setTimeout(600_000);
     const total = await listTotal(api, { meterType: 'all' });
     expect(total, 'consumer list').toBeGreaterThan(0);
@@ -93,12 +93,12 @@ test.describe('Consumer master data API @master-data @regression', () => {
     );
   });
 
-  test('a child hierarchy lookup is limited to the selected parent', async ({ api }) => {
+  test('A lower organisation level only lists places under the selected parent', async ({ api }) => {
     await expectChildLookupLimited(api, 'organisation', 'utilsSearchOrganisations');
     await expectChildLookupLimited(api, 'network', 'utilsSearchNetworks');
   });
 
-  test('meter phases, payment contracts, and communication each equal the total', async ({ api }) => {
+  test('Meter phases, payment types, and communication each add up to the consumer total', async ({ api }) => {
     test.setTimeout(180_000);
     const total = await listTotal(api, { meterType: 'all' });
     expectPartition(
@@ -123,7 +123,7 @@ test.describe('Consumer master data API @master-data @regression', () => {
     expect(never, 'never communicated is inside the fleet').toBeLessThanOrEqual(total);
   });
 
-  test('meter communication counts add up and cover the visible serials', async ({ api }) => {
+  test('Communicating and non-communicating counts add up and cover the meters on the page', async ({ api }) => {
     const result = await api.get('meterCommunicationStatus', {
       query: { limit: 20, page: 1 },
       expectedStatus: 200,
@@ -150,13 +150,13 @@ test.describe('Consumer master data API @master-data @regression', () => {
     }
   });
 
-  test('a hierarchy node contains the consumers of its children', async ({ api }) => {
+  test('An organisation level includes the consumers of the levels under it', async ({ api }) => {
     test.setTimeout(180_000);
     await expectChildConsumersWithinParent(api, 'organisation', 'utilsSearchOrganisations', 'organisationLookupId');
     await expectChildConsumersWithinParent(api, 'network', 'utilsSearchNetworks', 'networkLookupId');
   });
 
-  test('scope anchor, time of day, blank search, and a one-sided date follow the contract', async ({ api }) => {
+  test('The starting place, time of day, a blank search, and a date with only one end follow the agreed rules', async ({ api }) => {
     for (const kind of ['organisation', 'network'] as const) {
       const result = await api.get('utilsScopeAnchor', { params: { kind }, expectedStatus: 200 });
       const body = expectAuthorizedContract(result, scopeAnchorSchema, responseLimitMs, `${kind} scope anchor`);
@@ -181,7 +181,7 @@ test.describe('Consumer master data API @master-data @regression', () => {
     await expectValidation(api, { page: 0 });
   });
 
-  test('session, permissions, ledger, and export follow the page contract', async ({ api, data }) => {
+  test('Sign-in, permissions, the ledger, and download follow the agreed rules', async ({ api, data }) => {
     test.setTimeout(180_000);
     const me = await api.get('authMe', { expectedStatus: 200 });
     const session = expectAuthorizedContract(me, sessionMeSchema, responseLimitMs, 'auth me');
@@ -253,17 +253,17 @@ test.describe('Consumer master data API @master-data @regression', () => {
     expectSpreadsheet(exported, 'consumer export');
   });
 
-  test('rejects a bogus meter type, isNetMeter=1, and manufacturer id 0', async ({ api }) => {
+  test('An unknown meter type, a net-meter flag of 1, and manufacturer 0 are rejected', async ({ api }) => {
     await expectValidation(api, { meterType: 'bogus' });
     await expectValidation(api, { isNetMeter: 1 });
     await expectValidation(api, { deviceManufacturerTblRefId: 0 });
   });
 });
 
-test.describe('Consumer master data API security @master-data @regression', () => {
+test.describe('Consumer list sign-in checks @master-data @regression', () => {
   functionality('Master Data');
 
-  test('every consumer master data read rejects a missing token and a bad bearer', async ({ request, app, env }) => {
+  test('Every consumer list read is refused when nobody is signed in or the sign-in is not valid', async ({ request, app, env }) => {
     const anonymous = new ApiClient(request, app, env);
     const reads = [
       'consumerMasterData',

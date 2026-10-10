@@ -31,7 +31,7 @@ const DTR_HEADERS = [
   'Remarks',
 ];
 
-test.describe('DTR Data @master-data @regression', () => {
+test.describe('DTR list @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 180_000 });
 
@@ -44,7 +44,7 @@ test.describe('DTR Data @master-data @regression', () => {
     list = await new DtrMasterDataPage(page, app).open();
   });
 
-  test('DMD-001 DTR Data opens on the first page @smoke', async ({ page, app }) => {
+  test('The DTR list opens on the first page @smoke', async ({ page, app }) => {
     await expect(page).toHaveURL(/\/master-data\/dtrs(?:\?|$)/);
     await expect(page.getByText('Master Data', { exact: true }).first()).toBeVisible();
     await expect(page.locator('#dtr-master-search')).toHaveAttribute('placeholder', 'Search ...');
@@ -61,7 +61,7 @@ test.describe('DTR Data @master-data @regression', () => {
     await expect(page.getByRole('button', { name: 'Bulk Upload', exact: true })).toBeVisible();
   });
 
-  test('DMD-001 Download is disabled while the list is loading', async ({ page }) => {
+  test('Download stays unavailable while the DTR list is loading', async ({ page }) => {
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -82,7 +82,7 @@ test.describe('DTR Data @master-data @regression', () => {
     }
   });
 
-  test('DMD-002 and DMD-090 search, trim, clear, and a miss', async ({ page, app }) => {
+  test('Search ignores extra spaces, can be cleared, and shows nothing when there is no match', async ({ page, app }) => {
     const dtrs = new DtrMasterDataPage(page, app);
     const code = String(list.items.find((item) => String(item.dtrCode ?? '').trim())?.dtrCode ?? '').trim();
     expect(code, 'dtr code').not.toBe('');
@@ -98,11 +98,11 @@ test.describe('DTR Data @master-data @regression', () => {
     await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeDisabled();
   });
 
-  test('DMD-090 spaces are not sent as a search', async ({ page, app }) => {
+  test('A search made only of spaces is ignored', async ({ page, app }) => {
     await new DtrMasterDataPage(page, app).expectSpacesDoNotSearch();
   });
 
-  test('DMD-003 Online, Offline, hierarchy, and Reset', async ({ page, app }) => {
+  test('Online, Offline, and organisation filters narrow the list, and Reset clears them', async ({ page, app }) => {
     const dtrs = new DtrMasterDataPage(page, app);
     await dtrs.openFilters();
     await expect(page.getByRole('button', { name: 'Hierarchy level to search within', exact: true })).toBeDisabled();
@@ -119,8 +119,8 @@ test.describe('DTR Data @master-data @regression', () => {
     expect(reset.total).toBe(list.total);
   });
 
-  test('DMD-005 footer, page 2, page size, and the last page', async ({ page, app }) => {
-    test.skip(list.total <= 10, 'the list has one page');
+  test('The count at the bottom, page 2, the page size, and the last page all agree', async ({ page, app }) => {
+    test.skip(list.total <= 10, 'There is only one page of DTRs');
     const dtrs = new DtrMasterDataPage(page, app);
     await dtrs.expectFooter(list);
     const pageTwo = await dtrs.goToPage(2);
@@ -136,8 +136,8 @@ test.describe('DTR Data @master-data @regression', () => {
     expect(last.total).toBe(list.total);
   });
 
-  test('DMD-096 page size from page 2 returns to page 1', async ({ page, app }) => {
-    test.skip(list.total <= 10, 'the list has one page');
+  test('Changing the page size from page 2 returns to the first page', async ({ page, app }) => {
+    test.skip(list.total <= 10, 'There is only one page of DTRs');
     const dtrs = new DtrMasterDataPage(page, app);
     await dtrs.goToPage(2);
     const resized = await dtrs.setPageSize(50);
@@ -145,7 +145,7 @@ test.describe('DTR Data @master-data @regression', () => {
     expect(resized.limit).toBe(50);
   });
 
-  test('DMD-006 filtered and selected download', async ({ page, app }) => {
+  test('A filtered download and a download of selected DTRs both succeed', async ({ page, app }) => {
     const dtrs = new DtrMasterDataPage(page, app);
     const code = String(list.items[0]?.dtrCode ?? '').trim();
     await dtrs.searchFor(code);
@@ -160,11 +160,11 @@ test.describe('DTR Data @master-data @regression', () => {
     expect(Array.isArray(selected.selectedIds) && (selected.selectedIds as unknown[]).length).toBeGreaterThan(0);
   });
 
-  test('DMD-006 a failed download shows the failure message', async ({ page, app }) => {
+  test('A failed download shows the failure message', async ({ page, app }) => {
     await new DtrMasterDataPage(page, app).expectDownloadFailure();
   });
 
-  test('DMD-008 view DTR details opens that DTR', async ({ page, app }) => {
+  test('View details opens that DTR', async ({ page, app }) => {
     const row = list.items.find((item) => String(item.newDtrCode ?? item.dtrCode ?? '').trim());
     const code = String(row?.newDtrCode ?? row?.dtrCode ?? '').trim();
     expect(code, 'dtr code').not.toBe('');
@@ -172,7 +172,7 @@ test.describe('DTR Data @master-data @regression', () => {
     expect(decodeURIComponent(url)).toContain(`/dtr/${code}`);
   });
 
-  test('DMD-007 template headers and rejected files', async ({ page, app }) => {
+  test('The upload template has the right columns, and bad files are rejected', async ({ page, app }) => {
     test.setTimeout(180_000);
     const dtrs = new DtrMasterDataPage(page, app);
     const dialog = await dtrs.openBulk();
@@ -224,7 +224,7 @@ test.describe('DTR Data @master-data @regression', () => {
     expect(await posted, 'an oversized file is not posted').toBe(false);
   });
 
-  test('DMD-009 a failed list does not paint a total from the error', async ({ page, data }) => {
+  test('A failed DTR list does not show a total taken from the error', async ({ page, data }) => {
     await page.route('**/dtr-master-data**', (route) =>
       route.fulfill({ status: 500, contentType: 'application/json', body: data.json('payloads/mocks.json', 'pagedListFailed') }),
     );
@@ -235,12 +235,12 @@ test.describe('DTR Data @master-data @regression', () => {
   });
 });
 
-test('DMD-009 opening DTR Data without a session returns to login', async ({ page, app }) => {
+test('Opening the DTR list without signing in returns to the sign-in page', async ({ page, app }) => {
   await page.goto(app.routes.dtrData);
   await expect(page).toHaveURL(/\/login/);
 });
 
-test('DMD-009 a user without dtrs.view is denied', async ({ loginPage, data, page, app }) => {
+test('A person who cannot view DTRs is blocked from the DTR list', async ({ loginPage, data, page, app }) => {
   const rewrite = (route: Route) => denyDtrPermission(route, (key) => key !== 'dtrs.view');
   await page.route('**/auth/login**', rewrite);
   await page.route('**/auth/me**', rewrite);
@@ -263,7 +263,7 @@ test('DMD-009 a user without dtrs.view is denied', async ({ loginPage, data, pag
   await expect(page.getByRole('button', { name: 'Bulk Upload', exact: true })).toHaveCount(0);
 });
 
-test('DMD-009 a user without dtrs.create can read but cannot bulk upload', async ({ loginPage, data, page, app }) => {
+test('A person who can view DTRs but cannot create them can read the list and cannot bulk upload', async ({ loginPage, data, page, app }) => {
   const rewrite = (route: Route) => denyDtrPermission(route, (key) => key !== 'dtrs.create');
   await page.route('**/auth/login**', rewrite);
   await page.route('**/auth/me**', rewrite);

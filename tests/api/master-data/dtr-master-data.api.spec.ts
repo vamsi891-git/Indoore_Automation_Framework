@@ -86,7 +86,7 @@ const templateHeaders = [
   'Remarks',
 ];
 
-test.describe('DTR master data API @master-data @regression', () => {
+test.describe('DTR list on the server @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 180_000 });
 
@@ -95,7 +95,7 @@ test.describe('DTR master data API @master-data @regression', () => {
     expectApiContract(login, loginSchema, env.timeouts.api, 'login', { authorized: false, hasBody: true });
   });
 
-  test('DMA-001 the open list, page 2, search, and communication @smoke', async ({ api, env }) => {
+  test('The open list, page 2, search, and communication all return the right DTRs @smoke', async ({ api, env }) => {
     const first = await readDtrs(api, env.timeouts.api, openQuery);
     const total = first.data.pagination.total;
     const params = new URL(first.url).searchParams;
@@ -166,7 +166,7 @@ test.describe('DTR master data API @master-data @regression', () => {
     }
   });
 
-  test('DMA-001 limits, the last page, a page past the end, metric, and selected ids', async ({ api, env }) => {
+  test('Page size, the last page, a page past the end, a card filter, and a chosen set of DTRs all behave as expected', async ({ api, env }) => {
     const open = await readDtrs(api, env.timeouts.api, openQuery);
     const total = open.data.pagination.total;
     for (const limit of [20, 50]) {
@@ -210,7 +210,7 @@ test.describe('DTR master data API @master-data @regression', () => {
     expect(emptySelection.data.rows).toHaveLength(0);
   });
 
-  test('DMA-002 communication status covers the serials on the page', async ({ api, env }) => {
+  test('Communication status covers the meter serials on the page', async ({ api, env }) => {
     const page = await readDtrs(api, env.timeouts.api, openQuery);
     const serials = page.data.rows.map((row) => String(row.meterSerialNumber ?? '').trim()).filter((serial) => serial.length > 0);
     expect(serials.length, 'serials').toBeGreaterThan(0);
@@ -236,7 +236,7 @@ test.describe('DTR master data API @master-data @regression', () => {
     }
   });
 
-  test('DMA-003 organisation and network hierarchy levels', async ({ api, env }) => {
+  test('Organisation and network levels return the DTRs under the chosen place', async ({ api, env }) => {
     const openTotal = (await readDtrs(api, env.timeouts.api, openQuery)).data.pagination.total;
     for (const kind of ['organisation', 'network'] as const) {
       const result = await api.get('utilsHierarchies', { params: { kind }, expectedStatus: 200 });
@@ -264,7 +264,7 @@ test.describe('DTR master data API @master-data @regression', () => {
     }
   });
 
-  test('DMA-004 a one-code filtered export is an xlsx', async ({ api, env, data }) => {
+  test('A download filtered to one DTR code is an Excel file', async ({ api, env, data }) => {
     const page = await readDtrs(api, env.timeouts.api, openQuery);
     const code = String(page.data.rows[0]?.newDtrCode ?? page.data.rows[0]?.dtrCode ?? '').trim();
     expect(code).not.toBe('');
@@ -292,7 +292,7 @@ test.describe('DTR master data API @master-data @regression', () => {
     expect(rows.length - 1).toBe(matched.data.pagination.total);
   });
 
-  test('DMA-004 selected export and a filtered export of more than one row', async ({ api, env, data }) => {
+  test('A download of selected DTRs and a filtered download of more than one DTR both succeed', async ({ api, env, data }) => {
     const page = await readDtrs(api, env.timeouts.api, openQuery);
     const selectedId = positiveId(page.data.rows[0]?.meterLookupTblRefId);
     expect(selectedId, 'selected id').toBeGreaterThan(0);
@@ -326,7 +326,7 @@ test.describe('DTR master data API @master-data @regression', () => {
     expect(narrow.total).toBeGreaterThan(1);
   });
 
-  test('DMA-005 the bulk template is the DTR workbook', async ({ api, env }) => {
+  test('The bulk upload template is the DTR Excel file', async ({ api, env }) => {
     const file = await api.get('dtrBulkTemplate', { expectedStatus: 200, timeout: 60_000 });
     expect(file.durationMs).toBeLessThanOrEqual(env.timeouts.api);
     expect(file.contentType).toMatch(/spreadsheetml/i);
@@ -338,7 +338,7 @@ test.describe('DTR master data API @master-data @regression', () => {
     expect(headers, 'ISSUE DMA-005 template headers').toEqual(templateHeaders);
   });
 
-  test('DMA-006 a rejected import does not change the list total', async ({ api, env }) => {
+  test('A rejected upload does not change the DTR total', async ({ api, env }) => {
     const before = (await readDtrs(api, env.timeouts.api, openQuery)).data.pagination.total;
     const csv = await api.post('dtrBulkUpload', {
       multipart: {
@@ -374,7 +374,7 @@ test.describe('DTR master data API @master-data @regression', () => {
     expect(after.data.pagination.total, 'rejected files do not change the list').toBe(before);
   });
 
-  test('the signed-in shell calls return 200', async ({ api, env }) => {
+  test('The screens a signed-in person opens all succeed', async ({ api, env }) => {
     const me = expectAuthorizedContract(await api.get('authMe', { expectedStatus: 200 }), sessionMeSchema, env.timeouts.api, 'auth me');
     const keys = expectAuthorizedContract(
       await api.get('myPermissions', { expectedStatus: 200 }),
@@ -405,10 +405,10 @@ test.describe('DTR master data API @master-data @regression', () => {
   });
 });
 
-test.describe('DTR master data API security @master-data @regression', () => {
+test.describe('DTR list sign-in checks @master-data @regression', () => {
   functionality('Master Data');
 
-  test('DTR reads and shell reads reject a missing token and a bad bearer', async ({ request, app, env }) => {
+  test('DTR reads are refused when nobody is signed in or the sign-in is not valid', async ({ request, app, env }) => {
     const anonymous = new ApiClient(request, app, env);
     const reads: Array<{ endpoint: string; options?: Parameters<ApiClient['get']>[1] }> = [
       { endpoint: 'dtrMasterData', options: { query: openQuery } },
@@ -434,7 +434,7 @@ test.describe('DTR master data API security @master-data @regression', () => {
     }
   });
 
-  test('DTR export and DTR upload reject a missing token and a bad bearer', async ({ app, env, data }) => {
+  test('DTR download and DTR upload are refused when nobody is signed in or the sign-in is not valid', async ({ app, env, data }) => {
     const context = await playwrightRequest.newContext();
     const anonymous = new ApiClient(context, app, env);
     try {
@@ -469,7 +469,7 @@ test.describe('DTR master data API security @master-data @regression', () => {
     }
   });
 
-  test('export without a CSRF cookie returns 403 CSRF_MISSING', async ({ app, env, data }) => {
+  test('A DTR download without the security cookie is refused', async ({ app, env, data }) => {
     const context = await playwrightRequest.newContext();
     try {
       const anonymous = new ApiClient(context, app, env);

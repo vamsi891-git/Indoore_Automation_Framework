@@ -37,6 +37,7 @@ export class DonutComponent extends BaseComponent {
   async read(): Promise<DonutReading> {
     await this.root.waitFor({ state: 'visible' });
     await this.root.scrollIntoViewIfNeeded();
+    await this.root.getByText(this.title, { exact: true }).first().hover();
     await this.root.getByRole('button', { name: /^Open .+ details$/ }).first().waitFor();
 
     const chart = this.root.getByRole('img', { name: /donut chart/i });

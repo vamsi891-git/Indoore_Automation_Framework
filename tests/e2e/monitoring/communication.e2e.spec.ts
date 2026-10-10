@@ -2,10 +2,10 @@ import { expect, functionality, test } from '../../../src/core/fixtures/test.fix
 import { dtrListSchema, metricsSchema } from '../../../src/core/api/dashboard.schemas';
 import { DashboardPage } from '../../../src/pages/dashboard.page';
 
-test.describe('Indore live monitoring @monitoring @regression', () => {
+test.describe('Live monitoring @monitoring @regression', () => {
   functionality('Monitoring');
 
-  test('operator reviews DTRs and communication after signing in @smoke', async ({
+  test('After signing in, the operator can review DTRs and communication @smoke', async ({
     loginPage,
     api,
     data,

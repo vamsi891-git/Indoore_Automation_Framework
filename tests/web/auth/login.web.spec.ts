@@ -1,17 +1,17 @@
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
 import { ConsumersPage } from '../../../src/pages/consumers.page';
 
-test.describe('Sign-in page @auth @regression', () => {
+test.describe('Sign-in @auth @regression', () => {
   functionality('Authentication');
 
-  test('admin can open the operations dashboard @smoke', async ({ loginPage, data, page, app }) => {
+  test('An administrator can sign in and reach the consumer area @smoke', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));
     await expect(page).toHaveURL(new RegExp(`${escapeRegExp(app.routes.consumers)}$`), { timeout: 20_000 });
     await new ConsumersPage(page, app).expectReady();
   });
 
-  test('invalid credentials stay on the sign-in page', async ({ loginPage, data, page, app }) => {
+  test('A wrong password stays on the sign-in page', async ({ loginPage, data, page, app }) => {
     await loginPage.open();
     await loginPage.signIn(data.invalidLogin('unknownPassword'));
     const error = await loginPage.error();

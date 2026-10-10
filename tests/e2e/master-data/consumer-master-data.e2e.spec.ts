@@ -7,11 +7,11 @@ import { masterListSchema } from '../../../src/core/api/dashboard.schemas';
 import { ConsumerMasterDataPage } from '../../../src/pages/consumer-master-data.page';
 import { totalCount } from '../../api/support/expect-dashboard-contract';
 
-test.describe('Consumer Data UI against the API @master-data @regression', () => {
+test.describe('Consumer list on screen matches the server @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 240_000 });
 
-  test('the footer matches the list total for the open list and each meter-type and communication filter @smoke', async ({
+  test('The count at the bottom matches the server for the open list and for each meter type and communication filter @smoke', async ({
     loginPage,
     api,
     data,
@@ -51,7 +51,7 @@ test.describe('Consumer Data UI against the API @master-data @regression', () =>
     await consumers.expectTotal(offline.total);
   });
 
-  test('a filtered download has one workbook row per filtered consumer', async ({ loginPage, api, data, page, app, env }) => {
+  test('A filtered download has one Excel row for each filtered consumer', async ({ loginPage, api, data, page, app, env }) => {
     await api.authenticate(data.user('validAdmin'));
     await loginPage.open();
     await loginPage.signIn(data.user('validAdmin'));

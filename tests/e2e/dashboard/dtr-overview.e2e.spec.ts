@@ -11,12 +11,12 @@ interface MonthFilter {
   period: DtrPeriod;
 }
 
-test.describe('DTR Overview UI against the page reads @dashboard @regression', () => {
+test.describe('DTR overview on screen matches the server @dashboard @regression', () => {
   test.use({ timezoneId: 'Asia/Kolkata' });
   functionality('Dashboard');
   test.describe.configure({ timeout: 300_000 });
 
-  test('DOE-001 the selected month widgets match the seven reads', async ({ loginPage, data, page, app }) => {
+  test('The chosen month’s cards and charts match what the server returned', async ({ loginPage, data, page, app }) => {
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
     await overview.expectCards(snapshot.summary.body, 'daily');
@@ -31,14 +31,14 @@ test.describe('DTR Overview UI against the page reads @dashboard @regression', (
     overview.flushIssues();
   });
 
-  test('DOE-002 each card click matches the DTR list total', async ({ loginPage, data, page, app }) => {
+  test('Each card opens a DTR list with the same total', async ({ loginPage, data, page, app }) => {
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
     await overview.expectCardDrillDowns(snapshot.summary.body, periodLabel(filter.period), month.label);
     overview.flushIssues();
   });
 
-  test('DOE-003 power, communication, loading, load, and voltage clicks open the details the page loaded', async ({ loginPage, data, page, app }) => {
+  test('Power, communication, loading, load, and voltage each open the details the page loaded', async ({ loginPage, data, page, app }) => {
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
     const label = periodLabel(filter.period);
@@ -50,7 +50,7 @@ test.describe('DTR Overview UI against the page reads @dashboard @regression', (
     overview.flushIssues();
   });
 
-  test('DOE-004 an energy point opens consumption details', async ({ loginPage, data, page, app }) => {
+  test('An energy point opens the consumption details', async ({ loginPage, data, page, app }) => {
     const { overview, snapshot, filter } = await openSelected(loginPage, data, page, app);
     const month = calendarMonth(filter.monthYear);
     await overview.expectConsumptionDrillDown(snapshot.consumption.body, periodLabel(filter.period), month.label, filter.monthYear);

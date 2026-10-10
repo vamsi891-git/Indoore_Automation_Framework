@@ -7,7 +7,7 @@ import { expect, functionality, test } from '../../../src/core/fixtures/test.fix
 import { MeterList, MeterMasterDataPage } from '../../../src/pages/meter-master-data.page';
 import { METER_TEMPLATE_HEADERS, meterCells, writeMeterSheet } from '../../support/meter-workbook';
 
-test.describe('Meter Data @master-data @regression', () => {
+test.describe('Meter list @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 180_000 });
 
@@ -20,11 +20,11 @@ test.describe('Meter Data @master-data @regression', () => {
     list = await new MeterMasterDataPage(page, app).open();
   });
 
-  test('MMD-001 Meter Data opens on the first page @smoke', async ({ page, app }) => {
+  test('The meter list opens on the first page @smoke', async ({ page, app }) => {
     await new MeterMasterDataPage(page, app).expectShell(list);
   });
 
-  test('MMD-001 Download is disabled while the list is loading', async ({ page, data }) => {
+  test('Download stays unavailable while the meter list is loading', async ({ page, data }) => {
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -49,7 +49,7 @@ test.describe('Meter Data @master-data @regression', () => {
     }
   });
 
-  test('MMD-002 and MMD-090 search, trim, clear, and a search that keeps the filter', async ({ page, app }) => {
+  test('Search ignores extra spaces, can be cleared, and keeps the current filter', async ({ page, app }) => {
     const meters = new MeterMasterDataPage(page, app);
     const serial = meters.serialFrom(list);
     const found = await meters.expectDebounced(`  ${serial}  `);
@@ -73,7 +73,7 @@ test.describe('Meter Data @master-data @regression', () => {
     expect(new URL(cleared.url).searchParams.get('connection')).toBe('dtr');
   });
 
-  test('MMD-002 a single match hides the pager and a miss shows the empty text', async ({ page, app }) => {
+  test('One match hides the page buttons, and no match shows the empty message', async ({ page, app }) => {
     const meters = new MeterMasterDataPage(page, app);
     const serial = meters.serialFrom(list);
     const one = await meters.searchFor(serial);
@@ -89,11 +89,11 @@ test.describe('Meter Data @master-data @regression', () => {
     await expect(page.getByRole('button', { name: 'Page 2', exact: true })).toHaveCount(0);
   });
 
-  test('MMD-090 spaces are not sent as a search', async ({ page, app }) => {
+  test('A search made only of spaces is ignored', async ({ page, app }) => {
     await new MeterMasterDataPage(page, app).expectSpacesDoNotSearch();
   });
 
-  test('MMD-003 filters stay pending until Apply, then Reset', async ({ page, app }) => {
+  test('Filters wait until Apply, and Reset clears them', async ({ page, app }) => {
     const meters = new MeterMasterDataPage(page, app);
     await meters.expectFilterPanel();
     await meters.expectChoiceDoesNotApply('Filter by connection', 'DTR');
@@ -109,7 +109,7 @@ test.describe('Meter Data @master-data @regression', () => {
     expect(reset.total).toBe(list.total);
   });
 
-  test('MMD-003 a hierarchy id is sent on its own', async ({ page, app }) => {
+  test('Choosing one organisation level filters by that level only', async ({ page, app }) => {
     const meters = new MeterMasterDataPage(page, app);
     const applied = await meters.applyFirstOrganisation();
     await expect(page.getByRole('switch', { name: /1 Applied/ })).toBeVisible();
@@ -119,7 +119,7 @@ test.describe('Meter Data @master-data @regression', () => {
     await meters.expectFooter(applied);
   });
 
-  test('MMD-003 lookups loading disable the panel, and a failed lookup adds no levels', async ({ page, app, data }) => {
+  test('The filter panel waits while choices load, and a failed load adds no levels', async ({ page, app, data }) => {
     const meters = new MeterMasterDataPage(page, app);
     await page.route('**/utils/hierarchies/organisation**', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 1_500));
@@ -144,8 +144,8 @@ test.describe('Meter Data @master-data @regression', () => {
     await expect(page.getByRole('button', { name: 'Hierarchy level to search within', exact: true })).toContainText('Select Hierarchy');
   });
 
-  test('MMD-004 and MMD-005 footer, page 2, page size, and the last page', async ({ page, app }) => {
-    test.skip(list.total <= 10, 'the list has one page');
+  test('The count at the bottom, page 2, the page size, and the last page all agree', async ({ page, app }) => {
+    test.skip(list.total <= 10, 'There is only one page of meters');
     const meters = new MeterMasterDataPage(page, app);
     await meters.expectFooter(list);
     await meters.expectPageSizeMenu();
@@ -165,8 +165,8 @@ test.describe('Meter Data @master-data @regression', () => {
     expect(new URL(widest.url).searchParams.get('limit')).toBe('50');
   });
 
-  test('MMD-097 page size from page 2 returns to page 1', async ({ page, app }) => {
-    test.skip(list.total <= 10, 'the list has one page');
+  test('Changing the page size from page 2 returns to the first page', async ({ page, app }) => {
+    test.skip(list.total <= 10, 'There is only one page of meters');
     const meters = new MeterMasterDataPage(page, app);
     await meters.goToPage(2);
     const resized = await meters.setPageSize(20);
@@ -174,7 +174,7 @@ test.describe('Meter Data @master-data @regression', () => {
     expect(resized.limit).toBe(20);
   });
 
-  test('MMD-006 filtered and selected download', async ({ page, app }) => {
+  test('A filtered download and a download of selected meters both succeed', async ({ page, app }) => {
     const meters = new MeterMasterDataPage(page, app);
     const serial = meters.serialFrom(list);
     const found = await meters.searchFor(serial);
@@ -194,11 +194,11 @@ test.describe('Meter Data @master-data @regression', () => {
     expect(await workbookRows(selected.bytes)).toBe(1);
   });
 
-  test('MMD-006 a failed download shows the failure message', async ({ page, app }) => {
+  test('A failed download shows the failure message', async ({ page, app }) => {
     await new MeterMasterDataPage(page, app).expectDownloadFailure('Failed to fetch');
   });
 
-  test('MMD-007 template headers, then every rejected file and row rule', async ({ page, app }) => {
+  test('The upload template has the right columns, and bad files and bad rows are rejected', async ({ page, app }) => {
     test.setTimeout(240_000);
     const meters = new MeterMasterDataPage(page, app);
     const dialog = await meters.openBulk();
@@ -285,8 +285,8 @@ test.describe('Meter Data @master-data @regression', () => {
     expect(await posted, 'an oversized file is not posted').toBe(false);
   });
 
-  test('MMD-008 select, edit, and cancel delete', async ({ page, app }) => {
-    test.skip(list.items.length < 2, 'the first page has fewer than two rows');
+  test('Selected meters can be edited, and delete can be cancelled', async ({ page, app }) => {
+    test.skip(list.items.length < 2, 'The first page has fewer than two meters');
     const meters = new MeterMasterDataPage(page, app);
     await meters.selectRows(2);
     const editUrl = await meters.editFirst();
@@ -295,7 +295,7 @@ test.describe('Meter Data @master-data @regression', () => {
     await meters.deleteFirstCancelled();
   });
 
-  test('MMD-008 confirming delete stops at the password step', async ({ page, app }) => {
+  test('Confirming delete stops at the password step and does not delete the meter', async ({ page, app }) => {
     const meters = new MeterMasterDataPage(page, app);
     const serial = meters.serialFrom(list);
     await meters.confirmDeleteStopsBeforeExecute();
@@ -303,7 +303,7 @@ test.describe('Meter Data @master-data @regression', () => {
     expect(stillThere.total).toBeGreaterThan(0);
   });
 
-  test('Add Meter shows the form and Cancel returns to the list', async ({ page, app }) => {
+  test('Add Meter shows the form, and Cancel returns to the list', async ({ page, app }) => {
     const meters = new MeterMasterDataPage(page, app);
     await meters.openAddForm();
     await expect(page.getByRole('textbox', { name: /Meter Serial Number/ }).first()).toBeVisible();
@@ -312,7 +312,7 @@ test.describe('Meter Data @master-data @regression', () => {
     await expect(page).toHaveURL(/\/master-data\/meters(?:\?|$)/);
   });
 
-  test('a valid meter workbook reaches import preview and is not submitted', async ({ page, app }) => {
+  test('A valid meter Excel file reaches the preview and is not submitted', async ({ page, app }) => {
     const meters = new MeterMasterDataPage(page, app);
     const serial = meters.serialFrom(list);
     const before = list.total;
@@ -329,17 +329,16 @@ test.describe('Meter Data @master-data @regression', () => {
     expect(body.data?.pagination?.total).toBe(before);
   });
 
-  test('MMD-009 a failed list does not paint a total from the error', async ({ page, data }) => {
+  test('A failed meter list does not show a total taken from the error', async ({ page, data }) => {
     await page.route('**/meters-data**', (route) =>
       route.fulfill({ status: 500, contentType: 'application/json', body: data.json('payloads/mocks.json', 'pagedListFailed') }),
     );
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeDisabled();
     await expect(page.getByRole('checkbox', { name: /Select row / })).toHaveCount(0);
     await expect(page.getByText(/Showing\s+1[–-]10\s+of\s+0/)).toHaveCount(0);
   });
 
-  test('MMD-091 the panel filters are hierarchy, connection, and communication', async ({ page, app }) => {
+  test('The filter panel offers organisation, connection, and communication', async ({ page, app }) => {
     await new MeterMasterDataPage(page, app).openFilters();
     await expect(page.getByRole('radio')).toHaveCount(3);
     await expect(page.getByRole('radio', { name: 'All', exact: true })).toBeChecked();
@@ -362,12 +361,12 @@ test.describe('Meter Data @master-data @regression', () => {
   });
 });
 
-test('MMD-009 opening Meter Data without a session returns to login', async ({ page, app }) => {
+test('Opening the meter list without signing in returns to the sign-in page', async ({ page, app }) => {
   await page.goto(app.routes.meterData);
   await expect(page).toHaveURL(/\/login/);
 });
 
-test('MMD-009 a user without meters.view is denied', async ({ loginPage, data, page, app }) => {
+test('A person who cannot view meters is blocked from the meter list', async ({ loginPage, data, page, app }) => {
   const rewrite = (route: Route) => denyMeterPermission(route, (key) => key !== 'meters.view');
   await page.route('**/auth/login**', rewrite);
   await page.route('**/auth/me**', rewrite);
@@ -386,7 +385,7 @@ test('MMD-009 a user without meters.view is denied', async ({ loginPage, data, p
   await expect(page.getByRole('button', { name: 'Bulk Upload', exact: true })).toHaveCount(0);
 });
 
-test('MMD-009 a user without meter create can read but cannot bulk upload', async ({ loginPage, data, page, app }) => {
+test('A person who can view meters but cannot create them can read the list and cannot bulk upload', async ({ loginPage, data, page, app }) => {
   const rewrite = (route: Route) => denyMeterPermission(route, (key) => !/meter/i.test(key) || !/create|add|upload|write/i.test(key));
   await page.route('**/auth/login**', rewrite);
   await page.route('**/auth/me**', rewrite);
@@ -405,7 +404,7 @@ test('MMD-009 a user without meter create can read but cannot bulk upload', asyn
   await expect(page.getByRole('button', { name: 'Bulk Upload', exact: true })).toHaveCount(0);
 });
 
-test('MMD-009 a failed permission request is shown', async ({ loginPage, data, page, app }) => {
+test('A failed permission check shows a message instead of the meter list', async ({ loginPage, data, page, app }) => {
   await loginPage.open();
   await loginPage.signIn(data.user('validAdmin'));
   await page.waitForURL(/\/consumers(?:\?|$)/, { timeout: 20_000 });

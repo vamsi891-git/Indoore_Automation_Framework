@@ -1,7 +1,7 @@
 import { expect, functionality, test } from '../../../src/core/fixtures/test.fixtures';
 import { ConsumerList, ConsumerMasterDataPage } from '../../../src/pages/consumer-master-data.page';
 
-test.describe('Consumer Data filters @master-data @regression', () => {
+test.describe('Consumer list filters @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 90_000 });
 
@@ -14,13 +14,13 @@ test.describe('Consumer Data filters @master-data @regression', () => {
     list = await new ConsumerMasterDataPage(page, app).open();
   });
 
-  test('CMD-003 every hierarchy level and every filter option', async ({ page, app }) => {
+  test('Every organisation level and every filter option narrows the consumer list', async ({ page, app }) => {
     test.setTimeout(900_000);
     expect(list.total, 'consumer list').toBeGreaterThan(0);
     await new ConsumerMasterDataPage(page, app).expectEveryFilter(list.total);
   });
 
-  test('CMD-091 communicationStatus=never-communicated is ignored', async ({ page, app }) => {
+  test('A communication status of never communicated is ignored', async ({ page, app }) => {
     const pending = page.waitForResponse(
       (response) => response.url().includes('/master-data/consumer-master-data') && response.request().method() === 'GET',
     );

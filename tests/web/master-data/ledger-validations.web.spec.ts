@@ -14,7 +14,7 @@ type LedgerCase = {
   mode?: 'Merge' | 'Override';
 };
 
-test.describe('Consumer Data Ledger validations @master-data @regression', () => {
+test.describe('Consumer ledger upload checks @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 120_000 });
 
@@ -27,7 +27,7 @@ test.describe('Consumer Data Ledger validations @master-data @regression', () =>
     list = await new ConsumerMasterDataPage(page, app).open();
   });
 
-  test('CMD-010 every Ledger column rule, Merge, and Override', async ({ page, app }) => {
+  test('Every ledger column rule is checked, including Merge and Override', async ({ page, app }) => {
     test.setTimeout(900_000);
     const master = new ConsumerMasterDataPage(page, app);
     const identity = master.identityFrom(list);

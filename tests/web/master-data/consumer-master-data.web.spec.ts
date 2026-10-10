@@ -6,7 +6,7 @@ import { expect, functionality, test } from '../../../src/core/fixtures/test.fix
 import { ConsumerList, ConsumerMasterDataPage } from '../../../src/pages/consumer-master-data.page';
 import { LEDGER_TEMPLATE_HEADERS, readFirstRow, writeEmptyLedgerFile, writeLedgerFile } from './ledger-file';
 
-test.describe('Consumer Data @master-data @regression', () => {
+test.describe('Consumer list @master-data @regression', () => {
   functionality('Master Data');
   test.describe.configure({ timeout: 90_000 });
 
@@ -19,11 +19,11 @@ test.describe('Consumer Data @master-data @regression', () => {
     list = await new ConsumerMasterDataPage(page, app).open();
   });
 
-  test('CMD-001 Consumer Data opens on the first page @smoke', async ({ page, app }) => {
+  test('The consumer list opens on the first page @smoke', async ({ page, app }) => {
     await new ConsumerMasterDataPage(page, app).expectShell(list);
   });
 
-  test('CMD-002 search by a meter number from the list, then clear', async ({ page, app }) => {
+  test('Searching by a meter number finds that consumer, and clearing the search brings the full list back', async ({ page, app }) => {
     const master = new ConsumerMasterDataPage(page, app);
     const identity = master.identityFrom(list);
     const found = await master.searchFor(identity.serialNo);
@@ -33,12 +33,12 @@ test.describe('Consumer Data @master-data @regression', () => {
     expect(cleared.total, 'cleared total').toBe(list.total);
   });
 
-  test('CMD-090 spaces are not sent as a search', async ({ page, app }) => {
+  test('A search made only of spaces is ignored', async ({ page, app }) => {
     await new ConsumerMasterDataPage(page, app).expectSpacesDoNotSearch();
   });
 
-  test('CMD-005 page 2 and page size 20', async ({ page, app }) => {
-    test.skip(list.total <= 10, 'the list has one page');
+  test('Page 2 and a page size of 20 show the right consumers', async ({ page, app }) => {
+    test.skip(list.total <= 10, 'There is only one page of consumers');
     const master = new ConsumerMasterDataPage(page, app);
     const pageTwo = await master.goToPage(2);
     expect(new URL(pageTwo.url).searchParams.get('page')).toBe('2');
@@ -47,18 +47,18 @@ test.describe('Consumer Data @master-data @regression', () => {
     expect(wider.items.length).toBeLessThanOrEqual(20);
   });
 
-  test('CMD-006 hide Circle, cancel a hide, keep it after reload, then reset defaults', async ({ page, app }) => {
+  test('Hiding the Circle column can be cancelled, kept after refresh, and reset', async ({ page, app }) => {
     await new ConsumerMasterDataPage(page, app).hideCircleColumn();
   });
 
-  test('CMD-007 a row opens that consumer', async ({ page, app }) => {
+  test('Opening a row shows that consumer', async ({ page, app }) => {
     const item = list.items.find((row) => String(row.consumerName ?? '').trim());
     expect(item, 'a named consumer').toBeTruthy();
     await new ConsumerMasterDataPage(page, app).openFirstConsumer(item!);
   });
 
-  test('CMD-008 two selected rows can be viewed', async ({ page, app }) => {
-    test.skip(list.items.length < 2, 'the first page has fewer than two rows');
+  test('Two selected consumers can be viewed', async ({ page, app }) => {
+    test.skip(list.items.length < 2, 'The first page has fewer than two consumers');
     const master = new ConsumerMasterDataPage(page, app);
     await master.selectFirstRows(2);
     const extraList = page
@@ -70,12 +70,12 @@ test.describe('Consumer Data @master-data @regression', () => {
     await expect(page.getByRole('button', { name: 'Show All', exact: true })).toBeVisible();
   });
 
-  test('CMD-009 Download reports success', async ({ page, app }) => {
+  test('Download reports that the file was saved', async ({ page, app }) => {
     test.setTimeout(240_000);
     await new ConsumerMasterDataPage(page, app).downloadFiltered();
   });
 
-  test('CMD-010 Ledger template and a row that uses a database meter number', async ({ page, app }) => {
+  test('The ledger template downloads, and a row that uses a known meter number is accepted', async ({ page, app }) => {
     test.setTimeout(120_000);
     const master = new ConsumerMasterDataPage(page, app);
     const identity = master.identityFrom(list);
@@ -101,7 +101,7 @@ test.describe('Consumer Data @master-data @regression', () => {
     await master.expectTotal(list.total);
   });
 
-  test('CMD-010 Ledger rejects a blank Consumer No', async ({ page, app }) => {
+  test('The ledger rejects a blank consumer number', async ({ page, app }) => {
     const master = new ConsumerMasterDataPage(page, app);
     const identity = master.identityFrom(list);
     const dir = await mkdtemp(path.join(tmpdir(), 'ledger-'));
@@ -113,7 +113,7 @@ test.describe('Consumer Data @master-data @regression', () => {
     await expect(page.getByText('Consumer No is required.')).toBeVisible();
   });
 
-  test('CMD-010 Ledger rejects a Serial No that contains a space', async ({ page, app }) => {
+  test('The ledger rejects a meter serial number that contains a space', async ({ page, app }) => {
     const master = new ConsumerMasterDataPage(page, app);
     const identity = master.identityFrom(list);
     const spacedSerial = `${identity.serialNo.slice(0, 2)} ${identity.serialNo.slice(2)}`.slice(0, 32);
@@ -130,7 +130,7 @@ test.describe('Consumer Data @master-data @regression', () => {
     await expect(page.getByText('Serial No must not contain spaces.')).toBeVisible();
   });
 
-  test('CMD-010 Ledger rejects an empty workbook and a non-xlsx file', async ({ page, app }) => {
+  test('The ledger rejects an empty Excel file and a file that is not Excel', async ({ page, app }) => {
     const master = new ConsumerMasterDataPage(page, app);
     const dir = await mkdtemp(path.join(tmpdir(), 'ledger-'));
     const empty = path.join(dir, 'empty.xlsx');
@@ -153,11 +153,11 @@ test.describe('Consumer Data @master-data @regression', () => {
     await expect(page.getByText('Unable to read upload file. Use a valid .xlsx spreadsheet.')).toBeVisible();
   });
 
-  test('CMD-013 Bulk Upload opens Ledger, not the consumer-create dialog', async ({ page, app }) => {
+  test('Bulk Upload opens the ledger, not a form to create one consumer', async ({ page, app }) => {
     await new ConsumerMasterDataPage(page, app).openLedger();
   });
 
-  test('CMD-092 CMD-093 CMD-094 a bad meter type, net-meter flag, and manufacturer id are ignored', async ({ page, app }) => {
+  test('An unknown meter type, net-meter flag, or manufacturer is ignored', async ({ page, app }) => {
     test.setTimeout(180_000);
     await page.goto(`${app.routes.consumerData}?meterType=bogus&isNetMeter=1&deviceManufacturerTblRefId=0&fromDate=2026-10-01`);
     await expect(page.getByText('Consumer Data', { exact: true }).first()).toBeVisible({ timeout: 60_000 });
@@ -175,7 +175,7 @@ test.describe('Consumer Data @master-data @regression', () => {
     expect(params.has('toDate')).toBe(false);
   });
 
-  test('CMD-011 a failed list does not paint a total from the error', async ({ page, data }) => {
+  test('A failed consumer list does not show a total taken from the error', async ({ page, data }) => {
     await page.route('**/master-data/consumer-master-data**', (route) =>
       route.fulfill({ status: 500, contentType: 'application/json', body: data.json('payloads/mocks.json', 'consumerListFailed') }),
     );
@@ -199,12 +199,12 @@ test.describe('Consumer Data @master-data @regression', () => {
   });
 });
 
-test('CMD-011 opening Consumer Data without a session returns to login', async ({ page, app }) => {
+test('Opening the consumer list without signing in returns to the sign-in page', async ({ page, app }) => {
   await page.goto(app.routes.consumerData);
   await expect(page).toHaveURL(/\/login/);
 });
 
-test('CMD-011 a user without CONSUMERS_VIEW is denied', async ({ loginPage, data, page, app }) => {
+test('A person who cannot view consumers is blocked from the consumer list', async ({ loginPage, data, page, app }) => {
   const rewrite = (route: Route) => denyConsumerView(route);
   await page.route('**/auth/login**', rewrite);
   await page.route('**/auth/me**', rewrite);
